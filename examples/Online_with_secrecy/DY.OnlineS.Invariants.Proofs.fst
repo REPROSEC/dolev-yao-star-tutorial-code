@@ -349,8 +349,12 @@ let receive_ping_and_send_ack_invariant bob bob_keys_sid msg_ts tr =
                   assert(is_knowable_by (nonce_label alice bob) tr n_a);
                   serialize_wf_lemma message_t (is_knowable_by (nonce_label alice bob) tr) ack;
 
-                  (* The final requirement,
-                     follows from our helper lemma `decode_ping_proof`*)
+                  (* The final requirement is trivially satisfied, 
+                     since the pkenc_pred for an Ack is just True
+
+                     You can check:
+                     assert(pkenc_pred.pred tr (long_term_key_type_to_usage (LongTermPkEncKey key_tag) alice) (serialize message_t ack));
+                  *)
                 (* Thus, we can call `pk_enc_for_is_publishable`
                    to get the missing pre-condition for `send_msg_invariant`.*)
                 pk_enc_for_is_publishable tr bob alice bob_keys_sid.pki key_tag ack;
@@ -363,9 +367,7 @@ let receive_ping_and_send_ack_invariant bob bob_keys_sid msg_ts tr =
                    For the new SentAck state, this means that
                    the stored nonce
                    must be readble by
-                   * the storing principal (here bob)
-                   * the principal stored in the first component of the state 
-                     (here: alice received in the Ping message)
+                   the storing principal (here bob).
 
                    We get this property from our helper lemma `decode_ping_proof`.
                 *)

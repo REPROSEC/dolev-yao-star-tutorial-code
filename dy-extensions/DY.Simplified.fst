@@ -64,7 +64,6 @@ val pk_enc_for_is_publishable:
       trace_invariant tr
     /\ has_pki_invariant
     /\ bytes_invariant tr msg_b
-    // /\ is_knowable_by ( principal_label alice `join` principal_label bob ) tr (serialize a msg)
     /\ (get_label tr msg_b) `can_flow tr` (long_term_key_label bob)
     /\ (get_label tr msg_b) `can_flow tr` (long_term_key_label alice)
     /\ (pkenc_pred.pred tr (long_term_key_type_to_usage (LongTermPkEncKey key_tag) bob) msg_b
