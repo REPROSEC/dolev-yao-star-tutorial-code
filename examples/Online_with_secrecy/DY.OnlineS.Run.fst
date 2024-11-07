@@ -4,6 +4,7 @@ open DY.Core
 open DY.Lib
 
 open DY.OnlineS.Run.Printing
+open DY.OnlineS.Data
 open DY.OnlineS.Protocol
 
 /// Here, we print the trace after a successful run of the Two Message protocol.

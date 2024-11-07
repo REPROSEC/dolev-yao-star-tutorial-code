@@ -3,7 +3,7 @@ module DY.TwoMessage.Run.Printing
 open DY.Core
 open DY.Lib
 open Comparse
-open DY.TwoMessage.Protocol
+open DY.TwoMessage.Data
 
 /// Helper functions for trace printing.
 /// Here we define how our abstract message and state types
