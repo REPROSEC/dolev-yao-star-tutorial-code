@@ -7,6 +7,7 @@ open DY.Lib
 open DY.Simplified
 open DY.Extend
 
+open DY.OnlineS.Data
 open DY.OnlineS.Protocol
 open DY.OnlineS.Invariants
 
@@ -19,6 +20,8 @@ open DY.OnlineS.Invariants
 /// For every step s we show a lemma of the form:
 /// trace_invariant tr ==> trace_invariant ( trace after step s )
 
+
+(*** Sending a Ping maintains the invariants ***)
 
 
 /// The invariant lemma for the first step `send_ping`
@@ -59,7 +62,7 @@ let send_ping_invariant alice bob keys_sid  tr =
 
   // Defining the abstract message does not change the trace,
   // so we don't have to show anything.
-  let ping = Ping {p_alice = alice; p_n_a = n_a} in 
+  let ping = Ping {alice; n_a} in 
 
   (* The call of `pk_enc_for` in the traceful + option monad 
      has to be unfolded:
@@ -125,7 +128,7 @@ let send_ping_invariant alice bob keys_sid  tr =
 
              TODO              
           *)
-          serialize_wf_lemma message (is_knowable_by (nonce_label alice bob) tr_rand) ping;
+          serialize_wf_lemma message_t (is_knowable_by (nonce_label alice bob) tr_rand) ping;
 
           (* The next two pre-conditions say
              that the serialized ping should be readable by Alice and Bob.
@@ -150,7 +153,7 @@ let send_ping_invariant alice bob keys_sid  tr =
              and use the key of bob for encryption (in pk_enc_for),
              we satisfy the predicate.
           *)
-          assert(pkenc_pred.pred tr_rand (long_term_key_type_to_usage (LongTermPkEncKey key_tag) bob) (serialize message ping));
+          assert(pkenc_pred.pred tr_rand (long_term_key_type_to_usage (LongTermPkEncKey key_tag) bob) (serialize message_t ping));
       (* Now we showed all pre-conditions of `pk_enc_for_is_publishable`
          and can call this lemma to show that ping_encrypted is publishable.
 
@@ -161,7 +164,7 @@ let send_ping_invariant alice bob keys_sid  tr =
       assert(trace_invariant tr_msg);
 
       (* The last traceful action in this step is starting a new session *)
-      let st = SentPing {sp_bob = bob; sp_n_a = n_a} in
+      let st = SentPing {bob; n_a} in
       let (sid, tr_sess) = start_new_session alice st tr_msg in
       (* `start_new_session` is just calling `new_session_id` and then `set_state`.
          So we have to check that both of those maintain the trace invariant.
@@ -215,9 +218,13 @@ val send_ping_invariant_short_version:
   ))
 let send_ping_invariant_short_version alice bob keys_sid  tr =
   let (n_a, tr_rand) = gen_rand_labeled (nonce_label alice bob) tr in
-  let ping = Ping {p_alice = alice; p_n_a = n_a} in 
-  serialize_wf_lemma message (is_knowable_by (nonce_label alice bob) tr_rand) ping;
+  let ping = Ping {alice; n_a} in 
+  serialize_wf_lemma message_t (is_knowable_by (nonce_label alice bob) tr_rand) ping;
   pk_enc_for_is_publishable tr_rand alice bob keys_sid key_tag ping
+
+
+(*** Replying to a Ping maintains the invariants ***)
+
 
 (* For the second protocol step (`receive_ping_and_send_ack`),
    we need a helper lemma: `decode_ping_proof`.
@@ -239,11 +246,11 @@ val decode_ping_proof:
     match decode_ping bob keys_sid msg tr with
     | (None, _) -> True
     | (Some png, _) -> (
-        let n_a = png.p_n_a in
+        let n_a = png.n_a in
         bytes_invariant tr n_a /\
-        is_knowable_by (nonce_label png.p_alice bob) tr n_a /\
+        is_knowable_by (nonce_label png.alice bob) tr n_a /\
         ( is_publishable tr n_a
-        \/ (pkenc_pred.pred tr (long_term_key_type_to_usage (LongTermPkEncKey key_tag) bob) (serialize message (Ping png)))
+        \/ (pkenc_pred.pred tr (long_term_key_type_to_usage (LongTermPkEncKey key_tag) bob) (serialize message_t (Ping png)))
         )
     )
   ))
@@ -251,10 +258,10 @@ let decode_ping_proof tr bob keys_sid msg =
     match decode_ping bob keys_sid msg tr with
     | (None, _) -> ()
     | (Some png, _) -> (
-        bytes_invariant_pk_dec_with_key_lookup tr #message #parseable_serializeable_bytes_message bob keys_sid key_tag msg;
-        let plain = serialize message (Ping png) in
-        parse_wf_lemma message (bytes_invariant tr) plain;
-        FStar.Classical.move_requires (parse_wf_lemma message (is_publishable tr)) plain
+        bytes_invariant_pk_dec_with_key_lookup tr #message_t #parseable_serializeable_bytes_message_t bob keys_sid key_tag msg;
+        let plain = serialize message_t (Ping png) in
+        parse_wf_lemma message_t (bytes_invariant tr) plain;
+        FStar.Classical.move_requires (parse_wf_lemma message_t (is_publishable tr)) plain
     )
   
 
@@ -301,10 +308,10 @@ let receive_ping_and_send_ack_invariant bob bob_keys_sid msg_ts tr =
              //       tr_out == tr )
              //    = () in
           
-          let n_a = png.p_n_a in
-          let alice = png.p_alice in
+          let n_a = png.n_a in
+          let alice = png.alice in
           
-          let ack = Ack {a_n_a = n_a} in
+          let ack = Ack {n_a} in
           
           match pk_enc_for bob alice bob_keys_sid.pki key_tag ack tr with
           | (None, _) -> ()
@@ -329,8 +336,8 @@ let receive_ping_and_send_ack_invariant bob bob_keys_sid msg_ts tr =
                      TODO ....
                   *)
                   decode_ping_proof tr bob bob_keys_sid.private_keys msg;
-                  serialize_wf_lemma message (bytes_invariant tr) (ack);
-                  assert(bytes_invariant tr (serialize message ack));
+                  serialize_wf_lemma message_t (bytes_invariant tr) (ack);
+                  assert(bytes_invariant tr (serialize message_t ack));
                   
                   (* From this helper lemma, we also get
                      that the nonce is readable by alice and bob.
@@ -340,10 +347,14 @@ let receive_ping_and_send_ack_invariant bob bob_keys_sid msg_ts tr =
                      the serialized ack is readable by alice and bob 
                      (again ignoring the `long_term_key_label`) *)
                   assert(is_knowable_by (nonce_label alice bob) tr n_a);
-                  serialize_wf_lemma message (is_knowable_by (nonce_label alice bob) tr) ack;
+                  serialize_wf_lemma message_t (is_knowable_by (nonce_label alice bob) tr) ack;
 
-                  (* The final requirement,
-                     follows from our helper lemma `decode_ping_proof`*)
+                  (* The final requirement is trivially satisfied, 
+                     since the pkenc_pred for an Ack is just True
+
+                     You can check:
+                     assert(pkenc_pred.pred tr (long_term_key_type_to_usage (LongTermPkEncKey key_tag) alice) (serialize message_t ack));
+                  *)
                 (* Thus, we can call `pk_enc_for_is_publishable`
                    to get the missing pre-condition for `send_msg_invariant`.*)
                 pk_enc_for_is_publishable tr bob alice bob_keys_sid.pki key_tag ack;
@@ -356,19 +367,20 @@ let receive_ping_and_send_ack_invariant bob bob_keys_sid msg_ts tr =
                    For the new SentAck state, this means that
                    the stored nonce
                    must be readble by
-                   * the storing principal (here bob)
-                   * the principal stored in the first component of the state 
-                     (here: alice received in the Ping message)
+                   the storing principal (here bob).
 
                    We get this property from our helper lemma `decode_ping_proof`.
                 *)
-                let st = (SentAck {sa_alice = png.p_alice; sa_n_a = png.p_n_a}) in
+                let st = (SentAck {alice = png.alice; n_a = png.n_a}) in
                 let (sess_id, tr_sess) = start_new_session bob st tr_msg in
                 assert(trace_invariant tr_sess)
            )
       )
   )
 
+
+
+(*** Receiving an Ack maintains the invariants ***)
 
 /// The invariant lemma for the final protocol step `receive_ack_invariant`
 
