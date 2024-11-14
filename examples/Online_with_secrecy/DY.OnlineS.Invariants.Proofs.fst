@@ -69,14 +69,16 @@ let send_ping_invariant alice bob keys_sid  tr =
 
       (* The call of `pk_enc_for` in the traceful + option monad 
          has to be unfolded:
-         * We pass the current trace `tr_rand` as las argument
-         * We need to make a case distinction on the resulting option
-            and show trace_invariant in each case separately
+         As before, we pass the current trace `tr_rand` as last argument
+
+         Since the overall `send_ping` function is successful,
+         i.e., returns a Some,
+         we know that this step must also return a Some.
+         We can thus, immediately pattern match the result of
+         `pke_enc_for` to a Some and obtain a new trace `tr_enc`.
       *)
       let (Some ping_encrypted, tr_enc) = pk_enc_for alice bob keys_sid key_tag ping tr_rand in
-
-      (* If encryption succeeds, we get a new trace `tr_enc`.
-         With the lemma `pk_enc_for_invariant` in `DY.Simplified`,
+      (* With the lemma `pk_enc_for_invariant` in `DY.Simplified`,
          we have that trace_invariant holds for tr_enc.
 
          Observe, that this lemma can be shown automatically.
@@ -103,46 +105,46 @@ let send_ping_invariant alice bob keys_sid  tr =
          under which the ciphertext `ping_encrypted` is publishable.
          We show each of those pre-conditions.
       *)
-      (* The first is `has_pki_invariant`.
+          (* The first is `has_pki_invariant`.
 
-         It is a technical requirement on the protocol invariants 
-         which we are not explaining here.
+             It is a technical requirement on the protocol invariants 
+             which we are not explaining here.
 
-         In `DY.OnlineS.Invariants` we have the lemma `protocol_invariants_p_has_pki_invariant`
-         showing this requirement.
-      *)
-      assert(has_pki_invariant);
+             In `DY.OnlineS.Invariants` we have the lemma `protocol_invariants_p_has_pki_invariant`
+             showing this requirement.
+          *)
+          assert(has_pki_invariant);
 
-      (* The next requirement for `pk_enc_for_is_publishable` is `bytes_invariant tr_enc (serialize ping)`.
+          (* The next requirement for `pk_enc_for_is_publishable` is `bytes_invariant tr_enc (serialize ping)`.
 
-         TODO              
-      *)
-      serialize_wf_lemma message_t (is_knowable_by (nonce_label alice bob) tr_rand) ping;
+             TODO              
+          *)
+          serialize_wf_lemma message_t (is_knowable_by (nonce_label alice bob) tr_rand) ping;
 
-      (* The next two pre-conditions say
-         that the serialized ping should be readable by Alice and Bob.
-         (Ignore the `long_term_key_label` for now.)
+          (* The next two pre-conditions say
+             that the serialized ping should be readable by Alice and Bob.
+             (Ignore the `long_term_key_label` for now.)
 
-         TODO: they are resolved with the same serialize_wf_lemma
-      *)
+             TODO: they are resolved with the same serialize_wf_lemma
+          *)
 
-      (* Finally, we need to show the disjunction of
-         * the pkenc_pred holds for the serialized ping or
-         * the serialized ping is publishable
+          (* Finally, we need to show the disjunction of
+             * the pkenc_pred holds for the serialized ping or
+             * the serialized ping is publishable
 
-         In our case, the first is true, i.e., the encryption prediate is satisfied.
-         The predicate requires that the nonce contained in the ping
-         has the label `nonce_label alice' bob'`, where
-         * alice' is the name in the first component of the ping and
-         * bob' is the participant whos key is used for encryption.
+             In our case, the first is true, i.e., the encryption prediate is satisfied.
+             The predicate requires that the nonce contained in the ping
+             has the label `nonce_label alice' bob'`, where
+             * alice' is the name in the first component of the ping and
+             * bob' is the participant whos key is used for encryption.
 
-         Since we generate the nonce n_a in the beginning of this step
-         with the label `nonce_label alice bob`,
-         put the same alice in the first component of the ping
-         and use the key of bob for encryption (in pk_enc_for),
-         we satisfy the predicate.
-      *)
-      assert(pkenc_pred.pred tr_rand (long_term_key_type_to_usage (LongTermPkEncKey key_tag) bob) (serialize message_t ping));
+             Since we generate the nonce n_a in the beginning of this step
+             with the label `nonce_label alice bob`,
+             put the same alice in the first component of the ping
+             and use the key of bob for encryption (in pk_enc_for),
+             we satisfy the predicate.
+          *)
+          assert(pkenc_pred.pred tr_rand (long_term_key_type_to_usage (LongTermPkEncKey key_tag) bob) (serialize message_t ping));
       (* Now we showed all pre-conditions of `pk_enc_for_is_publishable`
          and can call this lemma to show that ping_encrypted is publishable.
 
@@ -186,8 +188,12 @@ let send_ping_invariant alice bob keys_sid  tr =
          it is applied automatically.
       *)
       assert(trace_invariant tr_sess);
-      assert(tr_out == tr_sess);
-      ()
+
+      (* Finally, we observe that the current trace `tr_sess`
+         is exactly the trace `tr_out` after the whole `send_ping` step.
+      *)
+      assert(tr_out == tr_sess)
+      (* Thus, the trace invariant must hold for `tr_out` concluding the proof. *)
    )
 
 (* The above proof was very detailed.
