@@ -94,6 +94,9 @@ copy_lib: extract_lib
 
 # Compilation
 
-.PHONY: check
+.PHONY: check #$(addprefix check-,$(INNER_EXAMPLE_DIRS))
 
-check:
+check-%: copy_lib
+	make -C examples/$* test
+
+check: $(addprefix check-,$(INNER_EXAMPLE_DIRS))

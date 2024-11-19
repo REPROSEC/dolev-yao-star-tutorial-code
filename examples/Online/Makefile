@@ -6,5 +6,5 @@ EXAMPLE_DIRS = $(addprefix $(TUTORIAL_HOME)/examples/, $(EXAMPLES))
 include $(TUTORIAL_HOME)/Makefile
 
 test:
-	cd $(TUTORIAL_HOME)/obj; OCAMLPATH=$(FSTAR_HOME)/lib ocamlbuild -use-ocamlfind -pkg batteries -pkg fstar.lib DY_Online_Run.native
+	cd $(TUTORIAL_HOME)/obj; OCAMLPATH=$(FSTAR_HOME)/lib:$(OCAMLPATH) ocamlbuild -use-ocamlfind -pkg batteries -pkg fstar.lib DY_Online_Run.native
 	$(TUTORIAL_HOME)/obj/DY_Online_Run.native
