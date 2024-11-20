@@ -6,12 +6,20 @@ open DY.Lib
 
 #set-options "--fuel 0 --ifuel 1 --z3rlimit 25  --z3cliopt 'smt.qi.eager_threshold=100'"
 
+#push-options "--fuel 1"
+val add_entry_: trace_entry -> traceful (option unit)
+let add_entry_ e tr =
+  reveal_opaque (`%grows) (grows #label);
+  norm_spec [zeta; delta_only [`%prefix]] (prefix #label);
+  (Some (), Snoc tr e)
+#pop-options
+
 let en = Corrupt 1
 
 let f (x:int) : traceful (option string) =
   if x < 2 
     then ( 
-      add_entry en;*
+      add_entry_ en;*?
       return (Some "added entry")
     )
     else return None
@@ -35,6 +43,30 @@ let f3'' :traceful (option string) =
 let f3''' :traceful (option string) = 
   f 0;*?
   f 1
+
+let f3_tr :traceful (option string) = 
+  f 1;*
+  f 2;*
+  f 0
+
+let f3_ :traceful (option string) = 
+  f 1;*?
+  f 2;*
+  f 0
+
+let f3_' :traceful (option string) = 
+  f 1;*
+  f 3;*
+  f 1;*
+  f 2;*?
+  f 0
+
+let f3_'' :traceful (option string) = 
+  f 1;*
+  f 3;*?
+  f 1;*
+  f 2;*?
+  f 0
 
 
 let rec trace_from_rev_list (ens: list trace_entry) : trace =
@@ -77,6 +109,10 @@ let _ =
   assert(None? opt_s_ges);
   assert(t_ges == trace_from_list [en]);
 
+  let (opt_s_ges, t_ges) = f3_tr t in
+  assert(Some? opt_s_ges);
+  assert(t_ges == trace_from_list [en;en]);
+
   let (opt_s_ges, t_ges) = f3' t in
   assert(None? opt_s_ges);
   assert(t_ges == trace_from_list [en; en]);
@@ -88,6 +124,18 @@ let _ =
   let (opt_s_ges, t_ges) = f3''' t in
   assert(Some? opt_s_ges);
   assert(t_ges == trace_from_list [en; en]);
+
+  let (opt_s_ges, t_ges) = f3_ t in
+  assert(Some? opt_s_ges);
+  assert(t_ges == trace_from_list [en; en]);
+
+  let (opt_s_ges, t_ges) = f3_' t in
+  assert(None? opt_s_ges);
+  assert(t_ges == trace_from_list [en; en]);
+
+  let (opt_s_ges, t_ges) = f3_'' t in
+  assert(None? opt_s_ges);
+  assert(t_ges == trace_from_list [en]);
 
   ()
 #pop-options
