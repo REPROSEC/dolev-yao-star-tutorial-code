@@ -42,10 +42,10 @@ val crypto_predicates_nsl: crypto_predicates
 let crypto_predicates_nsl = {
   default_crypto_predicates with
 
-  pkenc_pred = {
+  pke_pred = {
     pred = (fun tr sk_usage msg ->
       (exists prin. 
-      sk_usage == long_term_key_type_to_usage (LongTermPkEncKey "NSL.PublicKey") prin
+      sk_usage == long_term_key_type_to_usage (LongTermPkeKey "NSL.PublicKey") prin
       /\ (
         match parse message msg with
         | Some (Msg1 msg1) -> (
@@ -104,9 +104,9 @@ val compute_message1_proof:
     // From random generation
     is_secret (long_term_key_label alice) tr nonce /\
     // From random generation
-    nonce `has_usage tr` PkNonce /\
+    nonce `has_usage tr` PkeNonce /\
     // From PKI invariants
-    is_public_key_for tr pk_b (LongTermPkEncKey "NSL.PublicKey") bob
+    is_public_key_for tr pk_b (LongTermPkeKey "NSL.PublicKey") bob
   )
   (ensures is_publishable tr (compute_message1 alice bob pk_b n_a nonce))
 let compute_message1_proof tr alice bob pk_b n_a nonce =
@@ -126,7 +126,7 @@ val decode_message1_proof:
   Lemma
   (requires
     // From PrivateKeys invariants
-    is_private_key_for tr sk_b (LongTermPkEncKey "NSL.PublicKey") bob /\
+    is_private_key_for tr sk_b (LongTermPkeKey "NSL.PublicKey") bob /\
     // From the network
     bytes_invariant tr msg_cipher
   )
@@ -145,7 +145,7 @@ let decode_message1_proof tr bob msg_cipher sk_b =
   match decode_message1 bob msg_cipher sk_b with
   | None -> ()
   | Some msg1 ->
-    let Some msg = pk_dec sk_b msg_cipher in
+    let Some msg = pke_dec sk_b msg_cipher in
     FStar.Classical.move_requires (parse_wf_lemma message (is_publishable tr)) msg;
     FStar.Classical.move_requires (parse_wf_lemma message (bytes_invariant tr)) msg
 #pop-options
@@ -164,9 +164,9 @@ val compute_message2_proof:
     // From the random generation
     is_secret (long_term_key_label bob) tr nonce /\
     // From the random generation
-    nonce `has_usage tr` PkNonce /\
+    nonce `has_usage tr` PkeNonce /\
     // From the PKI
-    is_public_key_for tr pk_a (LongTermPkEncKey "NSL.PublicKey") msg1.alice
+    is_public_key_for tr pk_a (LongTermPkeKey "NSL.PublicKey") msg1.alice
   )
   (ensures
     is_publishable tr (compute_message2 bob msg1 pk_a n_b nonce)
@@ -190,7 +190,7 @@ val decode_message2_proof:
     // From the NSL state invariant
     is_secret (join (principal_label alice) (principal_label bob)) tr n_a /\
     // From the PrivateKeys invariant
-    is_private_key_for tr sk_a (LongTermPkEncKey "NSL.PublicKey") alice /\
+    is_private_key_for tr sk_a (LongTermPkeKey "NSL.PublicKey") alice /\
     // From the network
     bytes_invariant tr msg_cipher
   )
@@ -212,7 +212,7 @@ let decode_message2_proof tr alice bob msg_cipher sk_a n_a =
   match decode_message2 alice bob msg_cipher sk_a n_a with
   | None -> ()
   | Some msg2 -> (
-    let Some msg = pk_dec sk_a msg_cipher in
+    let Some msg = pke_dec sk_a msg_cipher in
     FStar.Classical.move_requires (parse_wf_lemma message (is_publishable tr)) msg;
     FStar.Classical.move_requires (parse_wf_lemma message (bytes_invariant tr)) msg
     ; assert(is_publishable tr msg ==> is_publishable tr msg2.n_a)
@@ -234,9 +234,9 @@ val compute_message3_proof:
     // From the random generation
     is_secret (long_term_key_label alice) tr nonce /\
     // From the random generation
-    nonce `has_usage tr` PkNonce /\
+    nonce `has_usage tr` PkeNonce /\
     // From the PKI
-    is_public_key_for tr pk_b (LongTermPkEncKey "NSL.PublicKey") bob
+    is_public_key_for tr pk_b (LongTermPkeKey "NSL.PublicKey") bob
   )
   (ensures
     is_publishable tr (compute_message3 alice bob pk_b n_b nonce)
@@ -260,7 +260,7 @@ val decode_message3_proof:
     // From the NSL state invariant
     get_label tr n_b == join (principal_label alice) (principal_label bob) /\
     // From the PrivateKeys invariant
-    is_private_key_for tr sk_b (LongTermPkEncKey "NSL.PublicKey") bob /\
+    is_private_key_for tr sk_b (LongTermPkeKey "NSL.PublicKey") bob /\
     // From the network
     bytes_invariant tr msg_cipher
   )
@@ -279,7 +279,7 @@ let decode_message3_proof tr alice bob msg_cipher sk_b n_b =
   match decode_message3 alice bob msg_cipher sk_b n_b with
   | None -> ()
   | Some msg3 -> (
-    let Some msg = pk_dec sk_b msg_cipher in
+    let Some msg = pke_dec sk_b msg_cipher in
     FStar.Classical.move_requires (parse_wf_lemma message (is_publishable tr)) msg;
     FStar.Classical.move_requires (parse_wf_lemma message (bytes_invariant tr)) msg
   )
@@ -292,7 +292,7 @@ val decode_message3__proof:
   Lemma
   (requires
     // From the PrivateKeys invariant
-    is_private_key_for tr sk_b (LongTermPkEncKey "NSL.PublicKey") bob /\
+    is_private_key_for tr sk_b (LongTermPkeKey "NSL.PublicKey") bob /\
     // From the network
     bytes_invariant tr msg_cipher
   )
@@ -312,7 +312,7 @@ let decode_message3__proof tr alice bob msg_cipher sk_b =
   match decode_message3_ msg_cipher sk_b with
   | None -> ()
   | Some msg3 -> (
-    let Some msg = pk_dec sk_b msg_cipher in
+    let Some msg = pke_dec sk_b msg_cipher in
     FStar.Classical.move_requires (parse_wf_lemma message (is_publishable tr)) msg;
     FStar.Classical.move_requires (parse_wf_lemma message (bytes_invariant tr)) msg
   )

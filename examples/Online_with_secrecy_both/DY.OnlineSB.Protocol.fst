@@ -129,7 +129,7 @@ let send_ping alice bob keys_sid =
   let* sid = start_new_session alice (SendingPing {sp_bob = bob; sp_n_a = n_a}) in
 
   let ping = Ping {p_alice = alice; p_n_a = n_a} in 
-  let*? ping_encrypted = pk_enc_for alice bob keys_sid key_tag ping in
+  let*? ping_encrypted = pke_enc_for alice bob keys_sid key_tag ping in
   // let* msg_ts = send_msg (serialize message ping) in
   let* msg_ts = send_msg ping_encrypted in
   
@@ -139,7 +139,7 @@ let send_ping alice bob keys_sid =
 val decode_ping : principal -> state_id -> bytes -> traceful (option ping_t)
 let decode_ping bob keys_sid msg =
   // let? png = parse message msg in
-  let*? png = pk_dec_with_key_lookup #message bob keys_sid key_tag msg in
+  let*? png = pke_dec_with_key_lookup #message bob keys_sid key_tag msg in
   guard_tr (Ping? png);*?
   return (Some (Ping?.msg png))
 
@@ -153,7 +153,7 @@ let receive_ping_and_send_ack bob global_sids msg_ts =
   let* sess_id = start_new_session bob (SendingAck {sa_alice = png.p_alice; sa_n_a = png.p_n_a}) in
 
   let ack = Ack {a_n_a = n_a} in
-  let*? ack_encrypted = pk_enc_for bob alice global_sids.pki key_tag ack in
+  let*? ack_encrypted = pke_enc_for bob alice global_sids.pki key_tag ack in
   let* ack_ts = send_msg ack_encrypted in
   
   return (Some (sess_id, ack_ts))
@@ -161,7 +161,7 @@ let receive_ping_and_send_ack bob global_sids msg_ts =
 
 val decode_ack : principal -> state_id -> bytes -> traceful (option ack)
 let decode_ack alice keys_sid cipher =
-  let*? ack = pk_dec_with_key_lookup #message alice keys_sid key_tag cipher in
+  let*? ack = pke_dec_with_key_lookup #message alice keys_sid key_tag cipher in
   guard_tr (Ack? ack);*?
   return (Some (Ack?.msg ack))
 

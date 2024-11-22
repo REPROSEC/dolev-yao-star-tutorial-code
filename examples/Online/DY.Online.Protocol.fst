@@ -49,7 +49,7 @@ let send_ping alice bob keys_sid =
   let ping = Ping {alice; n_a} in 
 
   // encrypt the message for bob
-  let*? ping_encrypted = pk_enc_for alice bob keys_sid key_tag ping in
+  let*? ping_encrypted = pke_enc_for alice bob keys_sid key_tag ping in
   let* msg_ts = send_msg ping_encrypted in
 
   let ping_state = SentPing {bob; n_a} in
@@ -86,7 +86,7 @@ let decode_ping bob keys_sid msg =
   // try to decrypt the message with
   // a private key of bob with the protocol tag
   // (fails, if no such key exists)
-  let*? png = pk_dec_with_key_lookup #message_t bob keys_sid key_tag msg in
+  let*? png = pke_dec_with_key_lookup #message_t bob keys_sid key_tag msg in
   
   // check that the decrypted message is of the right type
   // (otherwise fail)
@@ -109,7 +109,7 @@ let receive_ping_and_send_ack bob global_sids msg_ts =
 
   let ack = Ack {n_a} in
   // encrypt the reply for alice
-  let*? ack_encrypted = pk_enc_for bob alice global_sids.pki key_tag ack in
+  let*? ack_encrypted = pke_enc_for bob alice global_sids.pki key_tag ack in
   let* ack_ts = send_msg ack_encrypted in
   
   let* sess_id = start_new_session bob (SentAck {alice; n_a}) in
@@ -142,7 +142,7 @@ val decode_ack : principal -> state_id -> bytes -> traceful (option ack_t)
 let decode_ack alice keys_sid cipher =
   // try to decrypt the message with
   // a private key of alice with the protocol tag
-  let*? ack = pk_dec_with_key_lookup #message_t alice keys_sid key_tag cipher in
+  let*? ack = pke_dec_with_key_lookup #message_t alice keys_sid key_tag cipher in
 
   // check that the decrypted message is of the Ack type
   guard_tr (Ack? ack);*?
