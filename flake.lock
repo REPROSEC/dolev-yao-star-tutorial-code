@@ -1,0 +1,139 @@
+{
+  "nodes": {
+    "comparse-flake": {
+      "inputs": {
+        "fstar-flake": [
+          "dolev-yao-star-flake",
+          "fstar-flake"
+        ],
+        "nixpkgs": [
+          "dolev-yao-star-flake",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1726600332,
+        "narHash": "sha256-JYYCFIR4MgjGjpxnp/2Yr2fySTj/d/hTlCAwxhtFacM=",
+        "owner": "TWal",
+        "repo": "comparse",
+        "rev": "66471ca6f8d31c33c02e96684468121e920f1460",
+        "type": "github"
+      },
+      "original": {
+        "owner": "TWal",
+        "repo": "comparse",
+        "type": "github"
+      }
+    },
+    "dolev-yao-star-flake": {
+      "inputs": {
+        "comparse-flake": "comparse-flake",
+        "fstar-flake": "fstar-flake",
+        "nixpkgs": [
+          "dolev-yao-star-flake",
+          "fstar-flake",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1730802798,
+        "narHash": "sha256-C+og4+WhgzH56UAtEGjG2ZTiPvwXw+VSYTJ9uJlZEjI=",
+        "owner": "REPROSEC",
+        "repo": "dolev-yao-star-extrinsic",
+        "rev": "233597da0fb38f13f24e5cd25e7a015fb6278312",
+        "type": "github"
+      },
+      "original": {
+        "owner": "REPROSEC",
+        "ref": "twal/build",
+        "repo": "dolev-yao-star-extrinsic",
+        "type": "github"
+      }
+    },
+    "flake-utils": {
+      "inputs": {
+        "systems": "systems"
+      },
+      "locked": {
+        "lastModified": 1692799911,
+        "narHash": "sha256-3eihraek4qL744EvQXsK1Ha6C3CR7nnT8X2qWap4RNk=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "f9e7cf818399d17d347f847525c5a5a8032e4e44",
+        "type": "github"
+      },
+      "original": {
+        "id": "flake-utils",
+        "type": "indirect"
+      }
+    },
+    "fstar-flake": {
+      "inputs": {
+        "flake-utils": "flake-utils",
+        "nixpkgs": "nixpkgs"
+      },
+      "locked": {
+        "lastModified": 1729816826,
+        "narHash": "sha256-7+0Z5klNHUzDTew1ivQ6YqxHKUR+fLLUWfac82X9SBM=",
+        "owner": "FStarLang",
+        "repo": "FStar",
+        "rev": "8b6fce63ca91b16386d8f76e82ea87a3c109a208",
+        "type": "github"
+      },
+      "original": {
+        "owner": "FStarLang",
+        "repo": "FStar",
+        "type": "github"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1693158576,
+        "narHash": "sha256-aRTTXkYvhXosGx535iAFUaoFboUrZSYb1Ooih/auGp0=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "a999c1cc0c9eb2095729d5aa03e0d8f7ed256780",
+        "type": "github"
+      },
+      "original": {
+        "id": "nixpkgs",
+        "ref": "nixos-unstable",
+        "type": "indirect"
+      }
+    },
+    "root": {
+      "inputs": {
+        "comparse-flake": [
+          "dolev-yao-star-flake",
+          "comparse-flake"
+        ],
+        "dolev-yao-star-flake": "dolev-yao-star-flake",
+        "fstar-flake": [
+          "dolev-yao-star-flake",
+          "fstar-flake"
+        ],
+        "nixpkgs": [
+          "dolev-yao-star-flake",
+          "nixpkgs"
+        ]
+      }
+    },
+    "systems": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
+        "type": "github"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}
