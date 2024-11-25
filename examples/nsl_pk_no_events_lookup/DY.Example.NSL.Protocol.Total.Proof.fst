@@ -93,6 +93,7 @@ let rand_generated_before tr b =
 
 
 val compute_message1_proof:
+  {|protocol_invariants|} ->
   tr:trace ->
   alice:principal -> bob:principal -> pk_b:bytes -> n_a:bytes -> nonce:bytes ->
   Lemma
@@ -109,7 +110,9 @@ val compute_message1_proof:
     is_public_key_for tr pk_b (LongTermPkEncKey "NSL.PublicKey") bob
   )
   (ensures is_publishable tr (compute_message1 alice bob pk_b n_a nonce))
-let compute_message1_proof tr alice bob pk_b n_a nonce =
+  [SMTPat (trace_invariant tr);
+    SMTPat (compute_message1 alice bob pk_b n_a nonce)]
+let compute_message1_proof #invs tr alice bob pk_b n_a nonce =
   let msg = Msg1 {n_a; alice;} in
   serialize_wf_lemma message (is_knowable_by (long_term_key_label alice) tr) msg;
   serialize_wf_lemma message (is_knowable_by (long_term_key_label bob) tr) msg
@@ -121,6 +124,7 @@ let compute_message1_proof tr alice bob pk_b n_a nonce =
 // - if the message was encrypted by an honest principal, this follows from the encryption predicate
 #push-options "--ifuel 1 --fuel 0 --z3rlimit 25"
 val decode_message1_proof:
+  {|protocol_invariants|} ->
   tr:trace ->
   bob:principal -> msg_cipher:bytes -> sk_b:bytes ->
   Lemma
@@ -141,7 +145,9 @@ val decode_message1_proof:
       )
     )
   ))
-let decode_message1_proof tr bob msg_cipher sk_b =
+  [SMTPat (trace_invariant tr);
+    SMTPat (decode_message1 bob msg_cipher sk_b)]
+let decode_message1_proof #invs tr bob msg_cipher sk_b =
   match decode_message1 bob msg_cipher sk_b with
   | None -> ()
   | Some msg1 ->
@@ -151,6 +157,7 @@ let decode_message1_proof tr bob msg_cipher sk_b =
 #pop-options
 
 val compute_message2_proof:
+  {|protocol_invariants|} ->
   tr:trace ->
   bob:principal -> msg1:message1 -> pk_a:bytes -> n_b:bytes -> nonce:bytes ->
   Lemma
@@ -171,7 +178,9 @@ val compute_message2_proof:
   (ensures
     is_publishable tr (compute_message2 bob msg1 pk_a n_b nonce)
   )
-let compute_message2_proof tr bob msg1 pk_a n_b nonce =
+  [SMTPat (trace_invariant tr);
+    SMTPat (compute_message2 bob msg1 pk_a n_b nonce)]
+let compute_message2_proof #invs tr bob msg1 pk_a n_b nonce =
   let msg = Msg2 {n_a = msg1.n_a;  n_b; bob;} in
   serialize_wf_lemma message (is_knowable_by (principal_label msg1.alice) tr) msg;
   serialize_wf_lemma message (is_knowable_by (principal_label bob) tr) msg
@@ -183,6 +192,7 @@ let compute_message2_proof tr bob msg1 pk_a n_b nonce =
 // (proved with the encryption predicate)
 #push-options "--ifuel 1 --fuel 0 --z3rlimit 25"
 val decode_message2_proof:
+  {|protocol_invariants|} ->
   tr:trace ->
   alice:principal -> bob:principal -> msg_cipher:bytes -> sk_a:bytes -> n_a:bytes ->
   Lemma
@@ -208,7 +218,9 @@ val decode_message2_proof:
       )
     )
   ))
-let decode_message2_proof tr alice bob msg_cipher sk_a n_a =
+  [SMTPat (trace_invariant tr);
+    SMTPat (decode_message2 alice bob msg_cipher sk_a n_a)]
+let decode_message2_proof #invs tr alice bob msg_cipher sk_a n_a =
   match decode_message2 alice bob msg_cipher sk_a n_a with
   | None -> ()
   | Some msg2 -> (
@@ -223,6 +235,7 @@ let decode_message2_proof tr alice bob msg_cipher sk_a n_a =
 #pop-options
 
 val compute_message3_proof:
+  {|protocol_invariants|} ->
   tr:trace ->
   alice:principal -> bob:principal -> pk_b:bytes -> n_b:bytes -> nonce:bytes ->
   Lemma
@@ -241,7 +254,9 @@ val compute_message3_proof:
   (ensures
     is_publishable tr (compute_message3 alice bob pk_b n_b nonce)
   )
-let compute_message3_proof tr alice bob pk_b n_b nonce =
+  [SMTPat (trace_invariant tr);
+    SMTPat (compute_message3 alice bob pk_b n_b nonce)]
+let compute_message3_proof #invs tr alice bob pk_b n_b nonce =
   let msg = Msg3 {n_b;} in
   serialize_wf_lemma message (is_knowable_by (principal_label alice) tr) msg;
   serialize_wf_lemma message (is_knowable_by (principal_label bob) tr) msg;
@@ -253,6 +268,7 @@ let compute_message3_proof tr alice bob pk_b n_b nonce =
 // (proved with the encryption predicate)
 #push-options "--ifuel 1 --fuel 0 --z3rlimit 25"
 val decode_message3_proof:
+  {|protocol_invariants|} ->
   tr:trace ->
   alice:principal -> bob:principal -> msg_cipher:bytes -> sk_b:bytes -> n_b:bytes ->
   Lemma
@@ -275,7 +291,9 @@ val decode_message3_proof:
       ))
     )
   ))
-let decode_message3_proof tr alice bob msg_cipher sk_b n_b =
+  [SMTPat (trace_invariant tr);
+    SMTPat (decode_message3 alice bob msg_cipher sk_b n_b)]
+let decode_message3_proof #invs tr alice bob msg_cipher sk_b n_b =
   match decode_message3 alice bob msg_cipher sk_b n_b with
   | None -> ()
   | Some msg3 -> (
@@ -287,8 +305,9 @@ let decode_message3_proof tr alice bob msg_cipher sk_b n_b =
 
 #push-options "--ifuel 1 --fuel 0 --z3rlimit 25"
 val decode_message3__proof:
+  {|protocol_invariants|} ->
   tr:trace ->
-  alice:principal -> bob:principal -> msg_cipher:bytes -> sk_b:bytes ->
+  bob:principal -> msg_cipher:bytes -> sk_b:bytes ->
   Lemma
   (requires
     // From the PrivateKeys invariant
@@ -297,7 +316,7 @@ val decode_message3__proof:
     bytes_invariant tr msg_cipher
   )
   (ensures (
-    match decode_message3_ msg_cipher sk_b with
+    match decode_message3_ bob msg_cipher sk_b with
     | None -> True
     | Some msg3 -> (
       (is_publishable tr msg3.n_b)
@@ -308,8 +327,10 @@ val decode_message3__proof:
       ))
     )
   ))
-let decode_message3__proof tr alice bob msg_cipher sk_b =
-  match decode_message3_ msg_cipher sk_b with
+  [SMTPat (trace_invariant tr);
+    SMTPat (decode_message3_ bob msg_cipher sk_b)]
+let decode_message3__proof #invs tr bob msg_cipher sk_b =
+  match decode_message3_ bob msg_cipher sk_b with
   | None -> ()
   | Some msg3 -> (
     let Some msg = pk_dec sk_b msg_cipher in

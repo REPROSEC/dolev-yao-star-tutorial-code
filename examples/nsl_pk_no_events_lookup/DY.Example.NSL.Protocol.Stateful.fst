@@ -226,7 +226,7 @@ let receive_msg3 global_sess_id bob msg_id =
   let*? msg = recv_msg msg_id in
   let*? sk_b = get_private_key bob global_sess_id.private_keys (LongTermPkEncKey "NSL.PublicKey") in
 
-  let*? msg3: message3 = return (decode_message3_ msg sk_b) in
+  let*? msg3: message3 = return (decode_message3_ bob msg sk_b) in
   let p = (fun (s:nsl_session) -> 
     (ResponderSendingMsg2? s) && 
     (ResponderSendingMsg2?.n_b s = msg3.n_b)) in

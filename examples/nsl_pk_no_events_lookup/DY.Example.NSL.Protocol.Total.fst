@@ -106,7 +106,7 @@ let decode_message2 alice bob msg2_cipher sk_a n_a =
   Some msg2
 
 
-val decode_message2_: principal  -> bytes -> bytes -> option (message2)
+val decode_message2_: principal -> bytes -> bytes -> option (message2)
 let decode_message2_ alice msg2_cipher sk_a =
   let? msg2_plain = pk_dec sk_a msg2_cipher in
   let? msg2 = parse _ msg2_plain in
@@ -134,8 +134,8 @@ let decode_message3 alice bob msg_cipher sk_b n_b =
   guard (n_b = msg3.n_b);?
   Some msg3
 
-val decode_message3_: bytes -> bytes -> option (message3)
-let decode_message3_ msg_cipher sk_b =
+val decode_message3_: principal -> bytes -> bytes -> option (message3)
+let decode_message3_ bob msg_cipher sk_b =
   let? msg_plain = pk_dec sk_b msg_cipher in
   let? msg = parse _ msg_plain in
   guard (Msg3? msg);?

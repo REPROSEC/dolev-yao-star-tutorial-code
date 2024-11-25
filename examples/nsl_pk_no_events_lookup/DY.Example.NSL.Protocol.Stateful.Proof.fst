@@ -155,6 +155,7 @@ val prepare_msg1_proof:
 let prepare_msg1_proof tr alice bob =
   ()
 
+#push-options "--ifuel 3"
 val send_msg1_proof:
   tr:trace ->
   global_sess_id:nsl_global_sess_ids -> alice:principal -> sess_id:state_id ->
@@ -164,19 +165,9 @@ val send_msg1_proof:
     let (opt_msg_id, tr_out) = send_msg1 global_sess_id alice sess_id tr in
     trace_invariant tr_out
   ))
-let send_msg1_proof tr global_sess_id alice sess_id =
-  match send_msg1 global_sess_id alice sess_id tr with
-  | (None, tr_out) -> (
-      // TODO: why is this needed? how this it help?
-      get_state_same_trace #nsl_session alice sess_id tr
-  )
-  | (Some opt_msg_id, tr_out) -> (
-      let (Some (InitiatorSendingMsg1 bob n_a), tr) = get_state alice sess_id tr in
-//      assert(state_was_set_some_id tr alice (InitiatorSendingMsg1 bob n_a));
-      let (Some pk_b, tr) =  get_public_key alice global_sess_id.pki (LongTermPkEncKey "NSL.PublicKey") bob tr in
-      let (nonce, tr) = mk_rand PkNonce (long_term_key_label alice) 32 tr in
-      compute_message1_proof tr alice bob pk_b n_a nonce
-    )
+let send_msg1_proof tr global_sess_id alice sess_id = 
+  ()
+#pop-options
 
 val send_msg1__proof:
   tr:trace ->
@@ -188,21 +179,7 @@ val send_msg1__proof:
     trace_invariant tr_out
   ))
 let send_msg1__proof tr global_sess_id alice bob =
-  match send_msg1_ global_sess_id alice bob tr with
-  | (None, _) -> ()
-  | (Some opt_msg_id, tr_out) -> (
-      let (n_a, tr) = mk_rand NoUsage (join (principal_label alice) (principal_label bob)) 32 tr in
-
-      let (sess_id, _) = new_session_id alice tr in
-      let st = InitiatorSendingMsg1 bob n_a in
-      let (_ , tr_state) = set_state alice sess_id st tr in
-      // set_state_state_was_set alice sess_id st tr;
-      // assert(state_was_set_some_id tr_state alice (InitiatorSendingMsg1 bob n_a));
-
-      let  (Some pk_b, tr) = get_public_key alice global_sess_id.pki (LongTermPkEncKey "NSL.PublicKey") bob tr_state in
-      let (nonce, tr) = mk_rand PkNonce (long_term_key_label alice) 32 tr in
-      compute_message1_proof tr alice bob pk_b n_a nonce
-    )
+  ()
 
 val prepare_msg2_proof:
   tr:trace ->
@@ -214,15 +191,9 @@ val prepare_msg2_proof:
     trace_invariant tr_out
   ))
 let prepare_msg2_proof tr global_sess_id bob msg_id =
-  match prepare_msg2 global_sess_id bob msg_id tr with
-  | (None, _ ) -> ()
-  | (Some opt_sess_id, tr_out) -> (
-      let (Some msg, tr) = recv_msg msg_id tr in
-      let (Some sk_b, tr) = get_private_key bob global_sess_id.private_keys (LongTermPkEncKey "NSL.PublicKey") tr in
-      decode_message1_proof tr bob msg sk_b
-    )
+  ()
 
-#push-options "--ifuel 2"
+#push-options "--ifuel 3"
 val send_msg2_proof:
   tr:trace ->
   global_sess_id:nsl_global_sess_ids -> bob:principal -> sess_id:state_id ->
@@ -233,17 +204,7 @@ val send_msg2_proof:
     trace_invariant tr_out
   ))
 let send_msg2_proof tr global_sess_id bob sess_id =
-  match send_msg2 global_sess_id bob sess_id tr with
-  | (None, _) -> (
-      get_state_same_trace #nsl_session bob sess_id tr
-  )
-  | (Some opt_msg_id, tr_out) -> (
-    let (Some (ResponderSendingMsg2 alice n_a n_b), tr) = get_state bob sess_id tr in
-    //assert(state_was_set_some_id tr bob (ResponderSendingMsg2 alice n_a n_b));
-    let (Some pk_a, tr) = get_public_key bob global_sess_id.pki (LongTermPkEncKey "NSL.PublicKey") alice tr in
-    let (nonce, tr) = mk_rand PkNonce (long_term_key_label bob) 32 tr in
-    compute_message2_proof tr bob {n_a; alice;} pk_a n_b nonce
-  )
+  ()
 #pop-options
 
 val send_msg2__proof:
@@ -257,30 +218,8 @@ val send_msg2__proof:
   ))
 let send_msg2__proof tr global_sess_id bob msg_id =
   match send_msg2_ global_sess_id bob msg_id tr with
-  | (None, _) -> (
-     recv_msg_same_trace msg_id tr;
-     get_private_key_same_trace bob global_sess_id.private_keys (LongTermPkEncKey "NSL.PublicKey") tr
-    
-  ; admit()   
-  )
-  | (Some opt_ids, tr_out) -> (
-  let (Some msg, tr) = recv_msg msg_id tr in
-    let (Some sk_b, tr) = get_private_key bob global_sess_id.private_keys (LongTermPkEncKey "NSL.PublicKey") tr in
-      decode_message1_proof tr bob msg sk_b;
-      let Some msg1 = decode_message1 bob msg sk_b in
-      let alice = msg1.alice in
-      let n_a = msg1.n_a in
-    let (n_b, tr) = mk_rand NoUsage (join (principal_label msg1.alice) (principal_label bob)) 32 tr in
-    let (_, tr) = trigger_event bob (Responding alice bob n_a n_b) tr in
-    let st = ResponderSendingMsg2 msg1.alice msg1.n_a n_b in
-    let (sess_id, _) = new_session_id bob tr in
-    let (_, tr_st) = set_state bob sess_id st tr in
-//    set_state_state_was_set bob sess_id st tr_st;
-    assert(state_was_set_some_id tr_st bob st);
-    let (Some pk_a, tr) = get_public_key bob global_sess_id.pki (LongTermPkEncKey "NSL.PublicKey") alice tr_st in
-      let (nonce, tr) = mk_rand PkNonce (long_term_key_label bob) 32 tr in
-      compute_message2_proof tr bob {n_a; alice;} pk_a n_b nonce
-  )
+  | (None, _) -> ()
+  | (Some opt_ids, tr_out) -> ()
 
 val prepare_msg3_proof:
   tr:trace ->
@@ -292,14 +231,9 @@ val prepare_msg3_proof:
     trace_invariant tr_out
   ))
 let prepare_msg3_proof tr global_sess_id alice sess_id msg_id =
-  match prepare_msg3 global_sess_id alice sess_id msg_id tr with
-  | (None, _) -> ()
-  | (Some opt_sess_id, tr_out) -> 
-      let (Some msg, tr) = recv_msg msg_id tr in
-      let (Some sk_a, tr) = get_private_key alice global_sess_id.private_keys (LongTermPkEncKey "NSL.PublicKey") tr in
-      let  (Some (InitiatorSendingMsg1 bob n_a), tr) = get_state alice sess_id tr in
-      decode_message2_proof tr alice bob msg sk_a n_a
+  ()
 
+#push-options "--ifuel 4 --fuel 4 --z3rlimit 50"
 val prepare_msg3__proof:
   tr:trace ->
   global_sess_id:nsl_global_sess_ids -> alice:principal -> msg_id:timestamp ->
@@ -335,16 +269,7 @@ val send_msg3_proof:
     trace_invariant tr_out
   ))
 let send_msg3_proof tr global_sess_id alice sess_id =
-  match send_msg3 global_sess_id alice sess_id tr with
-  | (None, _ ) -> (
-    get_state_same_trace #nsl_session alice sess_id tr
-  )
-  | (Some opt_msg_id, tr_out) ->
-      let (Some (InitiatorSendingMsg3 bob n_a n_b), tr) = get_state alice sess_id tr in
-      //assert(state_was_set_some_id tr alice (InitiatorSendingMsg3 bob n_a n_b));
-      let (Some pk_b, tr) = get_public_key alice global_sess_id.pki (LongTermPkEncKey "NSL.PublicKey") bob tr in
-      let (nonce, tr) = mk_rand PkNonce (long_term_key_label alice) 32 tr in
-      compute_message3_proof tr alice bob pk_b n_b nonce
+  ()
 #pop-options
 
 val send_msg3__proof:
@@ -414,7 +339,7 @@ let receive_msg3_proof tr global_sess_id bob sess_id msg_id =
   | (Some opt_sess_id, tr_out) -> 
       let (Some msg, tr) = recv_msg msg_id tr in
       let (Some sk_b, tr) = get_private_key bob global_sess_id.private_keys (LongTermPkEncKey "NSL.PublicKey") tr in
-      let Some msg3 = decode_message3_ msg sk_b in
+      let Some msg3 = decode_message3_ bob msg sk_b in
       let p = (fun (s:nsl_session) -> 
         (ResponderSendingMsg2? s) && 
         (ResponderSendingMsg2?.n_b s = msg3.n_b)) in
@@ -426,7 +351,7 @@ let receive_msg3_proof tr global_sess_id bob sess_id msg_id =
       introduce ~(is_publishable tr n_b) ==> 
       state_was_set_some_id tr alice (InitiatorSendingMsg3 bob n_a n_b)
       with _. (
-        decode_message3__proof tr alice bob msg sk_b;
+        decode_message3__proof tr bob msg sk_b;
         eliminate exists alice' n_a'. get_label tr n_b `can_flow tr` (principal_label alice') /\ 
         state_was_set_some_id tr alice' (InitiatorSendingMsg3 bob n_a' n_b)
         returns _
