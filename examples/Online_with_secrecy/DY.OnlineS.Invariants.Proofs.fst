@@ -44,50 +44,41 @@ val send_ping_invariant:
    so we have to unfold the monadic lets and sequences.)
 *)
 let send_ping_invariant alice bob keys_sid  tr =
-  (* The first action is generating the nonce n_a.
-  
-     Note that we can't use let* here since we are not in the traceful monad.
-     Thus, we have to pass the trace `tr` explicitly as last argument.
-     And we get back the new trace `tr_rand`.
-  *)
-  let (n_a, tr_rand) = gen_rand_labeled (nonce_label alice bob) tr in
-  (* That the trace invariant holds after this action,
-     can be shown automatically.
-
-     There is a corresponding lemma in `DY.Core.Trace.Manipulation`:
-     `mk_rand_trace_invariant`.
-     It comes with an SMT Pattern an hence is applied automatically.
-  *)
-  assert(trace_invariant tr_rand);
-
-  // Defining the abstract message does not change the trace,
-  // so we don't have to show anything.
-  let ping = Ping {alice; n_a} in 
-
-  (* The call of `pk_enc_for` in the traceful + option monad 
-     has to be unfolded:
-     * We pass the current trace `tr_rand` as las argument
-     * We need to make a case distinction on the resulting option
-       and show trace_invariant in each case separately
-  *)
-  match pk_enc_for alice bob keys_sid key_tag ping tr_rand with
-  | (None, _) -> ( 
-      (* If encryption fails, the trace is not changed,
-         and hence the resulting trace after send_ping is tr_rand.
-         Since we already showed trace_invariant for tr_rand,
-         we don't have to show anything else in this case.
-
-        If you want to check this,
-        you can uncomment the next lines
+   match send_ping alice bob keys_sid tr with
+   | (None, _) -> ()
+   | (Some (state_id, msg_id), tr_out) -> (
+      (* The first action is generating the nonce n_a.
+      
+         Note that we can't use let* here since we are not in the traceful monad.
+         Thus, we have to pass the trace `tr` explicitly as last argument.
+         And we get back the new trace `tr_rand`.
       *)
-      // let (_ , tr_out) = send_ping alice bob keys_sid tr in 
-      // assert(tr_out == tr_rand);
-      // assert(trace_invariant tr_out);
-      ()
-    )
-  | (Some ping_encrypted, tr_enc) -> (
-      (* If encryption succeeds, we get a new trace `tr_enc`.
-         With the lemma `pk_enc_for_invariant` in `DY.Simplified`,
+      let (n_a, tr_rand) = gen_rand_labeled (nonce_label alice bob) tr in
+      (* That the trace invariant holds after this action,
+         can be shown automatically.
+
+         There is a corresponding lemma in `DY.Core.Trace.Manipulation`:
+         `mk_rand_trace_invariant`.
+         It comes with an SMT Pattern an hence is applied automatically.
+      *)
+      assert(trace_invariant tr_rand);
+
+      // Defining the abstract message does not change the trace,
+      // so we don't have to show anything.
+      let ping = Ping {alice; n_a} in 
+
+      (* The call of `pk_enc_for` in the traceful + option monad 
+         has to be unfolded:
+         As before, we pass the current trace `tr_rand` as last argument
+
+         Since the overall `send_ping` function is successful,
+         i.e., returns a Some,
+         we know that this step must also return a Some.
+         We can thus, immediately pattern match the result of
+         `pke_enc_for` to a Some and obtain a new trace `tr_enc`.
+      *)
+      let (Some ping_encrypted, tr_enc) = pk_enc_for alice bob keys_sid key_tag ping tr_rand in
+      (* With the lemma `pk_enc_for_invariant` in `DY.Simplified`,
          we have that trace_invariant holds for tr_enc.
 
          Observe, that this lemma can be shown automatically.
@@ -196,8 +187,14 @@ let send_ping_invariant alice bob keys_sid  tr =
          Since that lemma comes with an SMT pattern,
          it is applied automatically.
       *)
-      assert(trace_invariant tr_sess)
-  )
+      assert(trace_invariant tr_sess);
+
+      (* Finally, we observe that the current trace `tr_sess`
+         is exactly the trace `tr_out` after the whole `send_ping` step.
+      *)
+      assert(tr_out == tr_sess)
+      (* Thus, the trace invariant must hold for `tr_out` concluding the proof. *)
+   )
 
 (* The above proof was very detailed.
    In fact, most of the proof is done automatically by F*
@@ -279,104 +276,104 @@ val receive_ping_and_send_ack_invariant:
     trace_invariant tr_out
   ))
 let receive_ping_and_send_ack_invariant bob bob_keys_sid msg_ts tr =
+  match receive_ping_and_send_ack bob bob_keys_sid msg_ts tr with
+  | (None, _ ) -> ()
+  | (Some (sid, ack_ts), tr_out) ->
   (* As for the first protocol step,
      we need to show that every traceful action 
      maintains the trace invariant.
   *)
-  match recv_msg msg_ts tr with // unfold the traceful + option let
-  | (None, _ ) -> () // in this case the trace is not changed and hence the trace invariant is trivially satisfied
-  | (Some msg, _) -> (
-      (* From the lemma `recv_msg_same_trace` in `DY.Core.Trace.Manipulation` 
-         we have that the receive function does not change the trace
-         and hence the trace invariant is still satisfied. *)
-      match decode_ping bob bob_keys_sid.private_keys msg tr with // unfold the next monadic let
-      | (None, _) -> () // Again, if decoding fails, the trace is not changed and hence nothing left to show
-      | (Some png, _) -> (
-          (* Decoding the ping message does not change the trace.
-             So we are still working on the input trace tr,
-             for which we know the trace invariant.
+  let (Some msg, _) = recv_msg msg_ts tr in // unfold the traceful + option let
+  (* From the lemma `recv_msg_same_trace` in `DY.Core.Trace.Manipulation` 
+     we have that the receive function does not change the trace
+     and hence the trace invariant is still satisfied. *)
+  let (Some png, _) = decode_ping bob bob_keys_sid.private_keys msg tr in // unfold the next monadic let
+  (* Decoding the ping message does not change the trace.
+    So we are still working on the input trace tr,
+    for which we know the trace invariant.
 
-             That decoding doesn't change the trace,
-             is shown automatically 
-             with corresponding SMT patterns for the individual steps of the function.
-             I.e., try uncommenting the following lemma:
-           *) 
-             // let decode_ping_same_trace
-             //    (p:principal) (keys_sid:state_id) (msg:bytes) (tr:trace) :
-             //    Lemma (
-             //       let (_, tr_out) = decode_ping p keys_sid msg tr in
-             //       tr_out == tr )
-             //    = () in
-          
-          let n_a = png.n_a in
-          let alice = png.alice in
-          
-          let ack = Ack {n_a} in
-          
-          match pk_enc_for bob alice bob_keys_sid.pki key_tag ack tr with
-          | (None, _) -> ()
-          | (Some ack_encrypted, tr_ack) ->(
-                (* As before, encryption maintains the trace invariant 
-                   (see `pk_enc_for_invariant` in `DY.simplified`) *)
-                assert(trace_invariant tr_ack);
+    That decoding doesn't change the trace,
+    is shown automatically 
+    with corresponding SMT patterns for the individual steps of the function.
+    I.e., try uncommenting the following lemma:
+  *) 
+    // let decode_ping_same_trace
+    //    (p:principal) (keys_sid:state_id) (msg:bytes) (tr:trace) :
+    //    Lemma (
+    //       let (_, tr_out) = decode_ping p keys_sid msg tr in
+    //       tr_out == tr )
+    //    = () in
 
-                let (ack_ts, tr_msg) = send_msg ack_encrypted tr_ack in
-                (* The same as in the first protocol step:
-                   we want to use the lemma `send_msg_invariant` from `DY.Core.Trace.Manipulation`
-                   to show that sending the encrypted ack maintains the invariant.
+  let n_a = png.n_a in
+  let alice = png.alice in
 
-                   For this, we need to show that the encrypted ack is publishable.
-                   Again, we want to apply the lemma `pk_enc_for_is_publishable` from `DY.Simplified`.
-                   So we have to show all of the pre-conditions of this lemma.
-                *)
-                  (* `trace_invariant tr` and `has_pki_invariant` are satisfied *)
-                  (* For `bytes_invariant` of the serialized ack,
-                     we need a helper lemma.
+  let ack = Ack {n_a} in
 
-                     TODO ....
-                  *)
-                  decode_ping_proof tr bob bob_keys_sid.private_keys msg;
-                  serialize_wf_lemma message_t (bytes_invariant tr) (ack);
-                  assert(bytes_invariant tr (serialize message_t ack));
-                  
-                  (* From this helper lemma, we also get
-                     that the nonce is readable by alice and bob.
+  let (Some ack_encrypted, tr_ack) = pk_enc_for bob alice bob_keys_sid.pki key_tag ack tr in
+  (* As before, encryption maintains the trace invariant 
+     (see `pk_enc_for_invariant` in `DY.simplified`) *)
+  assert(trace_invariant tr_ack);
 
-                     We use this fact together with a comparse lemma,
-                     to show the next two requirements:
-                     the serialized ack is readable by alice and bob 
-                     (again ignoring the `long_term_key_label`) *)
-                  assert(is_knowable_by (nonce_label alice bob) tr n_a);
-                  serialize_wf_lemma message_t (is_knowable_by (nonce_label alice bob) tr) ack;
+  let (ack_ts, tr_msg) = send_msg ack_encrypted tr_ack in
+  (* The same as in the first protocol step:
+     we want to use the lemma `send_msg_invariant` from `DY.Core.Trace.Manipulation`
+     to show that sending the encrypted ack maintains the invariant.
 
-                  (* The final requirement is trivially satisfied, 
-                     since the pkenc_pred for an Ack is just True
+     For this, we need to show that the encrypted ack is publishable.
+     Again, we want to apply the lemma `pk_enc_for_is_publishable` from `DY.Simplified`.
+     So we have to show all of the pre-conditions of this lemma.
+  *)
+      (* `trace_invariant tr` and `has_pki_invariant` are satisfied *)
+      (* For `bytes_invariant` of the serialized ack,
+         we need a helper lemma.
 
-                     You can check:
-                     assert(pkenc_pred.pred tr (long_term_key_type_to_usage (LongTermPkEncKey key_tag) alice) (serialize message_t ack));
-                  *)
-                (* Thus, we can call `pk_enc_for_is_publishable`
-                   to get the missing pre-condition for `send_msg_invariant`.*)
-                pk_enc_for_is_publishable tr bob alice bob_keys_sid.pki key_tag ack;
-                assert(trace_invariant tr_msg);
+         TODO ....
+      *)
+      decode_ping_proof tr bob bob_keys_sid.private_keys msg;
+      serialize_wf_lemma message_t (bytes_invariant tr) (ack);
+      assert(bytes_invariant tr (serialize message_t ack));
 
-                (* As in the first protocol step,
-                   starting a new session maintains the trace invariant,
-                   if the new state satisfies the state predicate.
+      (* From this helper lemma, we also get
+         that the nonce is readable by alice and bob.
 
-                   For the new SentAck state, this means that
-                   the stored nonce
-                   must be readble by
-                   the storing principal (here bob).
+         We use this fact together with a comparse lemma,
+         to show the next two requirements:
+         the serialized ack is readable by alice and bob 
+         (again ignoring the `long_term_key_label`) *)
+      assert(is_knowable_by (nonce_label alice bob) tr n_a);
+      serialize_wf_lemma message_t (is_knowable_by (nonce_label alice bob) tr) ack;
 
-                   We get this property from our helper lemma `decode_ping_proof`.
-                *)
-                let st = (SentAck {alice = png.alice; n_a = png.n_a}) in
-                let (sess_id, tr_sess) = start_new_session bob st tr_msg in
-                assert(trace_invariant tr_sess)
-           )
-      )
-  )
+      (* The final requirement is trivially satisfied, 
+         since the pkenc_pred for an Ack is just True
+
+         You can check:
+         assert(pkenc_pred.pred tr (long_term_key_type_to_usage (LongTermPkEncKey key_tag) alice) (serialize message_t ack));
+      *)
+  (* Thus, we can call `pk_enc_for_is_publishable`
+     to get the missing pre-condition for `send_msg_invariant`.*)
+  pk_enc_for_is_publishable tr bob alice bob_keys_sid.pki key_tag ack;
+  assert(trace_invariant tr_msg);
+
+  (* As in the first protocol step,
+     starting a new session maintains the trace invariant,
+     if the new state satisfies the state predicate.
+
+     For the new SentAck state, this means that
+     the stored nonce
+     must be readble by
+     the storing principal (here bob).
+
+     We get this property from our helper lemma `decode_ping_proof`.
+  *)
+  let st = (SentAck {alice = png.alice; n_a = png.n_a}) in
+  let (sess_id, tr_sess) = start_new_session bob st tr_msg in
+  assert(trace_invariant tr_sess);
+  
+  (* And again, the current trace `tr_sess` is exactly
+     the trace after the whole `receive_ping_and_send_ack` step.
+  *)
+  assert(tr_out == tr_sess)
+
 
 
 

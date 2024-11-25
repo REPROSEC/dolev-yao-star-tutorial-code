@@ -159,15 +159,16 @@ let prepare_msg3_ global_sess_id alice msg_id =
     (InitiatorSendingMsg1? s) && 
     (InitiatorSendingMsg1?.n_a s = msg2.n_a) && 
     (InitiatorSendingMsg1?.b s = msg2.bob))  in
-  let* tr = get_trace in
-  let (opt_st, _) = lookup_state #nsl_session alice p tr in
-  match opt_st with
-  | None -> return None
-  | Some (st, sid ) -> (
+  // let* tr = get_trace in
+  let*? (st, sid) = lookup_state #nsl_session alice p in
+  guard_tr (p st);*?
+  // match opt_st with
+  // | None -> return None
+  // | Some (st, sid ) -> (
       let InitiatorSendingMsg1 bob n_a = st in
       set_state alice sid (InitiatorSendingMsg3 bob n_a msg2.n_b <: nsl_session);*
       return (Some sid)
-  )
+  // )
 
 
 val send_msg3: nsl_global_sess_ids -> principal -> state_id -> traceful (option timestamp)
@@ -191,22 +192,23 @@ let send_msg3_ global_sess_id alice msg_id =
     (InitiatorSendingMsg1? s) && 
     (InitiatorSendingMsg1?.n_a s = msg2.n_a) && 
     (InitiatorSendingMsg1?.b s = msg2.bob))  in
-  let* tr = get_trace in
-  let (opt_st, _) = lookup_state #nsl_session alice p tr in
-  match opt_st with
-  | None -> return None
-  | Some (st, sid ) -> (
-      let n_b = msg2.n_b in
-      let InitiatorSendingMsg1 bob n_a = st in
-      let st = InitiatorSendingMsg3 bob n_a n_b in
-      set_state alice sid st;*
+  //let* tr = get_trace in
+  let*? (st, sid) = lookup_state #nsl_session alice p in
+  // match opt_st with
+  // | None -> return None
+  // | Some (st, sid ) -> (
+  let n_b = msg2.n_b in
+  guard_tr(p st);*?
+  let InitiatorSendingMsg1 bob n_a = st in
+  let st = InitiatorSendingMsg3 bob n_a n_b in
+  set_state alice sid st;*
   
   let*? pk_b = get_public_key alice global_sess_id.pki (LongTermPkEncKey "NSL.PublicKey") bob in
   let* nonce = mk_rand PkNonce (long_term_key_label alice) 32 in
   let msg3 = compute_message3 alice bob pk_b n_b nonce in
   let* msg_id = send_msg msg3 in
   return (Some (msg_id, sid))
-  )
+  // )
 
 val prepare_msg4: nsl_global_sess_ids -> principal -> state_id -> timestamp -> traceful (option unit)
 let prepare_msg4 global_sess_id bob sess_id msg_id =
@@ -224,16 +226,12 @@ let receive_msg3 global_sess_id bob msg_id =
   let*? msg = recv_msg msg_id in
   let*? sk_b = get_private_key bob global_sess_id.private_keys (LongTermPkEncKey "NSL.PublicKey") in
 
-  let*? msg3: message3 = return (decode_message3_ msg sk_b) in
+  let*? msg3: message3 = return (decode_message3_ bob msg sk_b) in
   let p = (fun (s:nsl_session) -> 
     (ResponderSendingMsg2? s) && 
     (ResponderSendingMsg2?.n_b s = msg3.n_b)) in
-  let* tr = get_trace in
-  let (opt_st, _) = lookup_state #nsl_session bob p tr in
-  match opt_st with
-  | None -> return None
-  | Some (st, sid ) -> (
-         let ResponderSendingMsg2 alice n_a n_b = st in
-         set_state bob sid (ResponderReceivedMsg3 alice n_a n_b <: nsl_session);*
+  let*? (st, sid) = lookup_state #nsl_session bob p in
+  guard_tr (p st);*?
+  let ResponderSendingMsg2 alice n_a n_b = st in
+  set_state bob sid (ResponderReceivedMsg3 alice n_a n_b <: nsl_session);*
   return (Some ())
-  )
