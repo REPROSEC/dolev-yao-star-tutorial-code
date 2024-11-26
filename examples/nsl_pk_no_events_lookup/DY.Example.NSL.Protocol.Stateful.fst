@@ -71,8 +71,8 @@ let send_msg1 global_sess_id alice sess_id =
   let*? st = get_state alice sess_id in
   guard_tr (InitiatorSendingMsg1? st);*?
   let InitiatorSendingMsg1 bob n_a = st in
-  let*? pk_b = get_public_key alice global_sess_id.pki (LongTermPkEncKey "NSL.PublicKey") bob in
-  let* nonce = mk_rand PkNonce (long_term_key_label alice) 32 in
+  let*? pk_b = get_public_key alice global_sess_id.pki (LongTermPkeKey "NSL.PublicKey") bob in
+  let* nonce = mk_rand PkeNonce (long_term_key_label alice) 32 in
   let msg = compute_message1 alice bob pk_b n_a nonce in
   let* msg_id = send_msg msg in
   return (Some msg_id)
@@ -85,8 +85,8 @@ let send_msg1_ global_sess_id alice bob =
   let st = InitiatorSendingMsg1 bob n_a in
   set_state alice sess_id st;*
 
-  let*? pk_b = get_public_key alice global_sess_id.pki (LongTermPkEncKey "NSL.PublicKey") bob in
-  let* nonce = mk_rand PkNonce (long_term_key_label alice) 32 in
+  let*? pk_b = get_public_key alice global_sess_id.pki (LongTermPkeKey "NSL.PublicKey") bob in
+  let* nonce = mk_rand PkeNonce (long_term_key_label alice) 32 in
   let msg = compute_message1 alice bob pk_b n_a nonce in
   let* msg_id = send_msg msg in
   
@@ -96,7 +96,7 @@ let send_msg1_ global_sess_id alice bob =
 val prepare_msg2: nsl_global_sess_ids -> principal -> timestamp -> traceful (option state_id)
 let prepare_msg2 global_sess_id bob msg_id =
   let*? msg = recv_msg msg_id in
-  let*? sk_b = get_private_key bob global_sess_id.private_keys (LongTermPkEncKey "NSL.PublicKey") in
+  let*? sk_b = get_private_key bob global_sess_id.private_keys (LongTermPkeKey "NSL.PublicKey") in
   let*? msg1: message1 = return (decode_message1 bob msg sk_b) in
   let* n_b = mk_rand NoUsage (join (principal_label msg1.alice) (principal_label bob)) 32 in
   trigger_event bob (Responding msg1.alice bob msg1.n_a n_b);*
@@ -109,8 +109,8 @@ let send_msg2 global_sess_id bob sess_id =
   let*? st = get_state bob sess_id in
   guard_tr (ResponderSendingMsg2? st);*?
   let ResponderSendingMsg2 alice n_a n_b = st in
-  let*? pk_a = get_public_key bob global_sess_id.pki (LongTermPkEncKey "NSL.PublicKey") alice in
-  let* nonce = mk_rand PkNonce (long_term_key_label bob) 32 in
+  let*? pk_a = get_public_key bob global_sess_id.pki (LongTermPkeKey "NSL.PublicKey") alice in
+  let* nonce = mk_rand PkeNonce (long_term_key_label bob) 32 in
   let msg = compute_message2 bob {n_a; alice;} pk_a n_b nonce in
   let* msg_id = send_msg msg in
   return (Some msg_id)
@@ -119,7 +119,7 @@ let send_msg2 global_sess_id bob sess_id =
 val send_msg2_: nsl_global_sess_ids -> principal -> timestamp -> traceful (option (timestamp & state_id))
 let send_msg2_ global_sess_id bob msg_id =
   let*? msg = recv_msg msg_id in
-  let*? sk_b = get_private_key bob global_sess_id.private_keys (LongTermPkEncKey "NSL.PublicKey") in
+  let*? sk_b = get_private_key bob global_sess_id.private_keys (LongTermPkeKey "NSL.PublicKey") in
   let*? msg1: message1 = return (decode_message1 bob msg sk_b) in
 
   let alice = msg1.alice in
@@ -131,8 +131,8 @@ let send_msg2_ global_sess_id bob msg_id =
   let* sess_id = new_session_id bob in
   set_state bob sess_id st;*
   
-  let*? pk_a = get_public_key bob global_sess_id.pki (LongTermPkEncKey "NSL.PublicKey") msg1.alice in
-  let* nonce = mk_rand PkNonce (long_term_key_label bob) 32 in
+  let*? pk_a = get_public_key bob global_sess_id.pki (LongTermPkeKey "NSL.PublicKey") msg1.alice in
+  let* nonce = mk_rand PkeNonce (long_term_key_label bob) 32 in
   let msg2 = compute_message2 bob {n_a; alice;} pk_a n_b nonce in
   let* msg_id = send_msg msg2 in
 
@@ -142,7 +142,7 @@ let send_msg2_ global_sess_id bob msg_id =
 val prepare_msg3: nsl_global_sess_ids -> principal -> state_id -> timestamp -> traceful (option unit)
 let prepare_msg3 global_sess_id alice sess_id msg_id =
   let*? msg = recv_msg msg_id in
-  let*? sk_a = get_private_key alice global_sess_id.private_keys (LongTermPkEncKey "NSL.PublicKey") in
+  let*? sk_a = get_private_key alice global_sess_id.private_keys (LongTermPkeKey "NSL.PublicKey") in
   let*? st = get_state alice sess_id in
   guard_tr (InitiatorSendingMsg1? st);*?
   let InitiatorSendingMsg1 bob n_a = st in
@@ -153,7 +153,7 @@ let prepare_msg3 global_sess_id alice sess_id msg_id =
 val prepare_msg3_: nsl_global_sess_ids -> principal -> timestamp -> traceful (option state_id)
 let prepare_msg3_ global_sess_id alice msg_id =
   let*? msg = recv_msg msg_id in
-  let*? sk_a = get_private_key alice global_sess_id.private_keys (LongTermPkEncKey "NSL.PublicKey") in
+  let*? sk_a = get_private_key alice global_sess_id.private_keys (LongTermPkeKey "NSL.PublicKey") in
   let*? msg2: message2 = return (decode_message2_ alice msg sk_a) in
   let p = (fun (s:nsl_session) -> 
     (InitiatorSendingMsg1? s) && 
@@ -175,8 +175,8 @@ let send_msg3 global_sess_id alice sess_id =
   let*? st = get_state alice sess_id in
   guard_tr (InitiatorSendingMsg3? st);*?
   let InitiatorSendingMsg3 bob n_a n_b = st in
-  let*? pk_b = get_public_key alice global_sess_id.pki (LongTermPkEncKey "NSL.PublicKey") bob in
-  let* nonce = mk_rand PkNonce (long_term_key_label alice) 32 in
+  let*? pk_b = get_public_key alice global_sess_id.pki (LongTermPkeKey "NSL.PublicKey") bob in
+  let* nonce = mk_rand PkeNonce (long_term_key_label alice) 32 in
   let msg = compute_message3 alice bob pk_b n_b nonce in
   let* msg_id = send_msg msg in
   return (Some msg_id)
@@ -184,7 +184,7 @@ let send_msg3 global_sess_id alice sess_id =
 val send_msg3_: nsl_global_sess_ids -> principal -> timestamp -> traceful (option (timestamp & state_id))
 let send_msg3_ global_sess_id alice msg_id =
   let*? msg = recv_msg msg_id in
-  let*? sk_a = get_private_key alice global_sess_id.private_keys (LongTermPkEncKey "NSL.PublicKey") in
+  let*? sk_a = get_private_key alice global_sess_id.private_keys (LongTermPkeKey "NSL.PublicKey") in
   let*? msg2: message2 = return (decode_message2_ alice msg sk_a) in
   
   let p = (fun (s:nsl_session) -> 
@@ -201,8 +201,8 @@ let send_msg3_ global_sess_id alice msg_id =
       let st = InitiatorSendingMsg3 bob n_a n_b in
       set_state alice sid st;*
   
-  let*? pk_b = get_public_key alice global_sess_id.pki (LongTermPkEncKey "NSL.PublicKey") bob in
-  let* nonce = mk_rand PkNonce (long_term_key_label alice) 32 in
+  let*? pk_b = get_public_key alice global_sess_id.pki (LongTermPkeKey "NSL.PublicKey") bob in
+  let* nonce = mk_rand PkeNonce (long_term_key_label alice) 32 in
   let msg3 = compute_message3 alice bob pk_b n_b nonce in
   let* msg_id = send_msg msg3 in
   return (Some (msg_id, sid))
@@ -211,7 +211,7 @@ let send_msg3_ global_sess_id alice msg_id =
 val prepare_msg4: nsl_global_sess_ids -> principal -> state_id -> timestamp -> traceful (option unit)
 let prepare_msg4 global_sess_id bob sess_id msg_id =
   let*? msg = recv_msg msg_id in
-  let*? sk_b = get_private_key bob global_sess_id.private_keys (LongTermPkEncKey "NSL.PublicKey") in
+  let*? sk_b = get_private_key bob global_sess_id.private_keys (LongTermPkeKey "NSL.PublicKey") in
   let*? st = get_state bob sess_id in
   guard_tr (ResponderSendingMsg2? st);*?
   let ResponderSendingMsg2 alice n_a n_b = st in
@@ -222,7 +222,7 @@ let prepare_msg4 global_sess_id bob sess_id msg_id =
 val receive_msg3: nsl_global_sess_ids -> principal -> timestamp -> traceful (option unit)
 let receive_msg3 global_sess_id bob msg_id =
   let*? msg = recv_msg msg_id in
-  let*? sk_b = get_private_key bob global_sess_id.private_keys (LongTermPkEncKey "NSL.PublicKey") in
+  let*? sk_b = get_private_key bob global_sess_id.private_keys (LongTermPkeKey "NSL.PublicKey") in
 
   let*? msg3: message3 = return (decode_message3_ msg sk_b) in
   let p = (fun (s:nsl_session) -> 

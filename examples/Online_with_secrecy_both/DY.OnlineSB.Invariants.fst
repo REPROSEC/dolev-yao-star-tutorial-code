@@ -30,12 +30,12 @@ instance crypto_usages_p : crypto_usages = default_crypto_usages
 #push-options "--ifuel 2 --fuel 0"
 let crypto_p : crypto_predicates = { 
   default_crypto_predicates with 
-  pkenc_pred = { 
+  pke_pred = { 
     pred = (fun tr sk_usage msg ->
     exists prin. // the intended receiver of the message
     (
       // needed for `decode_ping_proof` [Why?]
-      sk_usage == long_term_key_type_to_usage (LongTermPkEncKey key_tag) prin /\
+      sk_usage == long_term_key_type_to_usage (LongTermPkeKey key_tag) prin /\
       (match parse message msg with
       | Some (Ping ping) ->
           let bob = prin in

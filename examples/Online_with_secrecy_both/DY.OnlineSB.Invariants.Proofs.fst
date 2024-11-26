@@ -32,14 +32,14 @@ let send_ping_invariant alice bob keys_sid  tr =
 
 
   let ping = Ping {p_alice = alice; p_n_a = n_a} in 
-  match pk_enc_for alice bob keys_sid key_tag ping tr_sess with
+  match pke_enc_for alice bob keys_sid key_tag ping tr_sess with
   | (None, _) -> ()
   | (Some ping_encrypted, tr_enc) -> (
       assert(trace_invariant tr_enc);
       let (msg_ts, tr_msg) = send_msg ping_encrypted tr_enc in
       serialize_wf_lemma message (is_knowable_by (nonce_label alice bob) tr_sess) ping;
       parse_serialize_inv_lemma #bytes message ping;
-      bytes_invariant_pk_enc_for tr_sess alice bob keys_sid key_tag ping;
+      bytes_invariant_pke_enc_for tr_sess alice bob keys_sid key_tag ping;
       assert(trace_invariant tr_msg)
   )
 
@@ -60,7 +60,7 @@ val decode_ping_proof:
         bytes_invariant tr n_a /\
         is_knowable_by (nonce_label png.p_alice bob) tr n_a /\
         ( is_publishable tr n_a
-        \/ (pkenc_pred.pred tr (long_term_key_type_to_usage (LongTermPkEncKey key_tag) bob) (serialize message (Ping png)))
+        \/ (pke_pred.pred tr (long_term_key_type_to_usage (LongTermPkeKey key_tag) bob) (serialize message (Ping png)))
         )
     )
   ))
@@ -68,7 +68,7 @@ let decode_ping_proof tr bob keys_sid msg =
     match decode_ping bob keys_sid msg tr with
     | (None, _) -> ()
     | (Some png, _) -> (
-        bytes_invariant_pk_dec_with_key_lookup tr #message #parseable_serializeable_bytes_message bob keys_sid key_tag msg;
+        bytes_invariant_pke_dec_with_key_lookup tr #message #parseable_serializeable_bytes_message bob keys_sid key_tag msg;
         let plain = serialize message (Ping png) in
         parse_wf_lemma message (bytes_invariant tr) plain;
         FStar.Classical.move_requires (parse_wf_lemma message (is_publishable tr)) plain
@@ -103,7 +103,7 @@ let receive_ping_and_send_ack_invariant bob bob_keys_sid msg_ts tr =
                 assert(trace_invariant tr_sess);
 
            let ack = Ack {a_n_a = n_a} in
-           match pk_enc_for bob alice bob_keys_sid.pki key_tag ack tr_sess with
+           match pke_enc_for bob alice bob_keys_sid.pki key_tag ack tr_sess with
            | (None, _) -> ()
            | (Some ack_encrypted, tr_ack) ->(
                 assert(trace_invariant tr_ack);
@@ -114,7 +114,7 @@ let receive_ping_and_send_ack_invariant bob bob_keys_sid msg_ts tr =
                 assert(bytes_invariant tr (serialize message ack));
 
                 serialize_wf_lemma message (is_knowable_by (nonce_label alice bob) tr) (ack);
-                bytes_invariant_pk_enc_for tr_sess bob alice bob_keys_sid.pki key_tag ack;
+                bytes_invariant_pke_enc_for tr_sess bob alice bob_keys_sid.pki key_tag ack;
                 let (ack_ts, tr_msg) = send_msg ack_encrypted tr_ack in
                 assert(trace_invariant tr_msg);
                 ()

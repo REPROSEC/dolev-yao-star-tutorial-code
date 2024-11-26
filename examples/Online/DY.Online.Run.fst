@@ -40,24 +40,24 @@ let run () : traceful (option unit ) =
     } in
 
   // Generate private key for Alice and store it in her private keys session
-  generate_private_key alice alice_global_session_ids.private_keys (LongTermPkEncKey key_tag);*
+  generate_private_key alice alice_global_session_ids.private_keys (LongTermPkeKey key_tag);*
   
   // Generate private key for Bob and store it in his private keys session
-  generate_private_key bob bob_global_session_ids.private_keys (LongTermPkEncKey key_tag);*
+  generate_private_key bob bob_global_session_ids.private_keys (LongTermPkeKey key_tag);*
 
   // Store Bob's public key in Alice's state
   // Bob's public key is computed from his private key
   // 1. Retrieve Bob's private key from his private key session
   // 2. Compute the public key from the private key
   // 3. Install Bob's public key in Alice's public key store
-  let*? priv_key_bob = get_private_key bob bob_global_session_ids.private_keys (LongTermPkEncKey key_tag) in
+  let*? priv_key_bob = get_private_key bob bob_global_session_ids.private_keys (LongTermPkeKey key_tag) in
   let pub_key_bob = pk priv_key_bob in
-  install_public_key alice alice_global_session_ids.pki (LongTermPkEncKey key_tag) bob pub_key_bob;*
+  install_public_key alice alice_global_session_ids.pki (LongTermPkeKey key_tag) bob pub_key_bob;*
 
   // Store Alice's public key in Bob's state in the same way
-  let*? priv_key_alice = get_private_key alice alice_global_session_ids.private_keys (LongTermPkEncKey key_tag) in
+  let*? priv_key_alice = get_private_key alice alice_global_session_ids.private_keys (LongTermPkeKey key_tag) in
   let pub_key_alice = pk priv_key_alice in
-  install_public_key bob bob_global_session_ids.pki (LongTermPkEncKey key_tag) alice pub_key_alice;*
+  install_public_key bob bob_global_session_ids.pki (LongTermPkeKey key_tag) alice pub_key_alice;*
 
 
 

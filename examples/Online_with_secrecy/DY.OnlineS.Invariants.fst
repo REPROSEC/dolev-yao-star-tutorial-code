@@ -27,7 +27,7 @@ open DY.OnlineS.Protocol
 
 
 (** TODO **)
-// needed for `crypto_prediates.pkenc_pred.pred_later`
+// needed for `crypto_prediates.pke_pred.pred_later`
 %splice [ps_ping_t_is_well_formed] (gen_is_well_formed_lemma (`ping_t))
 %splice [ps_ack_t_is_well_formed] (gen_is_well_formed_lemma (`ack_t))
 %splice [ps_message_t_is_well_formed] (gen_is_well_formed_lemma (`message_t))
@@ -47,7 +47,7 @@ let crypto_p : crypto_predicates = {
      What are the guarantees that an honest sender can provide
      that are available at the receiver after decryption?
   *)
-  pkenc_pred = { 
+  pke_pred = { 
     pred = (fun tr sk_usage msg ->
     exists prin. // the intended receiver of the message
     (
@@ -55,7 +55,7 @@ let crypto_p : crypto_predicates = {
       (* the key used for the encryption is
          a protocol-level public key for the intended receiver (prin) 
       *)
-      sk_usage == long_term_key_type_to_usage (LongTermPkEncKey key_tag) prin /\
+      sk_usage == long_term_key_type_to_usage (LongTermPkeKey key_tag) prin /\
       (match parse message_t msg with
       | Some (Ping ping) ->
           (* a Ping message can only be encrypted if
