@@ -3,7 +3,7 @@
     nixpkgs.follows = "dolev-yao-star-flake/nixpkgs";
     fstar-flake.follows = "dolev-yao-star-flake/fstar-flake";
     comparse-flake.follows = "dolev-yao-star-flake/comparse-flake";
-    dolev-yao-star-flake.url = "github:REPROSEC/dolev-yao-star-extrinsic?ref=twal/build";
+    dolev-yao-star-flake.url = "github:REPROSEC/dolev-yao-star-extrinsic";
   };
 
   outputs = {self, nixpkgs, fstar-flake, comparse-flake, dolev-yao-star-flake}:

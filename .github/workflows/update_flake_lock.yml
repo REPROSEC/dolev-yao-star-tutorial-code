@@ -1,0 +1,20 @@
+name: Update flake.lock
+
+on:
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: [ self-hosted, nix ]
+    steps:
+    - name: checkout
+      uses: actions/checkout@v4
+
+    - name: update flake.lock
+      run: nix flake update
+
+    - name: upload flake.lock
+      uses: actions/upload-artifact@v4
+      with:
+        name: flake.lock
+        path: flake.lock
