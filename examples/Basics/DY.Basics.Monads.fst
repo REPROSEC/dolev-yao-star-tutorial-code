@@ -6,6 +6,27 @@ open DY.Lib
 
 #set-options "--fuel 3 --ifuel 1 --z3rlimit 25  --z3cliopt 'smt.qi.eager_threshold=100'"
 
+
+let rec trace_from_rev_list (ens: list trace_entry) : trace =
+  match ens with
+  | [] -> Nil
+  | hd::tl -> Snoc (trace_from_rev_list tl ) hd
+
+open FStar.List.Tot.Base
+
+let trace_from_list ens = trace_from_rev_list (rev ens)
+
+let _ = 
+  let ev1 = Corrupt 1 in
+  let ev2 = Corrupt 2 in
+  let ens = [ev1; ev2] in
+  let tr_rev = trace_from_rev_list ens in
+  assert(tr_rev == Snoc (Snoc Nil ev2) ev1);
+
+  let tr = trace_from_list ens in
+  assert(tr == Snoc (Snoc Nil ev1) ev2)
+
+
 #push-options "--fuel 1"
 val add_entry_: trace_entry -> traceful (option unit)
 let add_entry_ e tr =
@@ -19,7 +40,7 @@ let en = Corrupt 1
 
 (*** Composition in the traceful + option monad ***)
 
-let f (x:int) : traceful (option string) =
+let f (x:nat) : traceful (option string) =
   if x < 2 
     then ( 
       add_entry_ en;*?
@@ -46,27 +67,6 @@ let f3'' :traceful (option string) =
 let f3''' :traceful (option string) = 
   f 0;*?
   f 1
-
-
-let rec trace_from_rev_list (ens: list trace_entry) : trace =
-  match ens with
-  | [] -> Nil
-  | hd::tl -> Snoc (trace_from_rev_list tl ) hd
-
-open FStar.List.Tot.Base
-
-let trace_from_list ens = trace_from_rev_list (rev ens)
-
-let _ = 
-  let ev1 = Corrupt 1 in
-  let ev2 = Corrupt 2 in
-  let ens = [ev1; ev2] in
-  let tr_rev = trace_from_rev_list ens in
-  assert(tr_rev == Snoc (Snoc Nil ev2) ev1);
-
-  let tr = trace_from_list ens in
-  assert(tr == Snoc (Snoc Nil ev1) ev2)
-
 
 let _ = 
   let t = trace_from_list [] in
@@ -100,8 +100,6 @@ let _ =
   let (opt_s_ges, t_ges) = f3''' t in
   assert(Some? opt_s_ges);
   assert(t_ges == trace_from_list [en; en]);
-
-
   ()
 
 (*** Comparing traceful+option with plain traceful actions ***)
@@ -132,8 +130,26 @@ let f_opt n =
 
 val f_combine_tropt_and_opt: nat -> traceful (option string)
 let f_combine_tropt_and_opt n =
-  return (f_opt n);*?
-  f n
+  let*? nn = return (f_opt n) in
+  f nn
+
+let _ = 
+  let t = trace_from_list [] in
+
+  // f_opt 1 fails
+  let (opt_str, tr) = f_combine_tropt_and_opt 1 t in
+  assert(None? opt_str);
+  assert(tr == t);
+
+  // everything is successful
+  let (opt_str, tr) = f_combine_tropt_and_opt 2 t in
+  assert(Some? opt_str);
+  assert(tr == trace_from_list [en]);
+
+  // f 2 fails
+  let (opt_str, tr) = f_combine_tropt_and_opt 3 t in
+  assert(None? opt_str);
+  assert(tr == t)
 
 (*** Combining traceful+option with plain non-optional traceful actions ***)
 
@@ -154,11 +170,16 @@ let f_combine_tropt_and_trnonopt_with_let x =
   let* nx = f_tr_nonopt x in
   f nx
 
-
+/// Having a non-optional traceful action as last step
 val f_combine_tropt_and_trnonopt_more: nat -> traceful (option nat)
 let f_combine_tropt_and_trnonopt_more x =
   let* nx = f_tr_nonopt x in
   f nx;*?
+  // the following intuitive call will NOT work
+  // f_tr_nonopt nx
+  
+  // instead, we need to access the return value and 
+  // return it as a Some
   let* nnx = f_tr_nonopt nx in
   return (Some nnx)
 
