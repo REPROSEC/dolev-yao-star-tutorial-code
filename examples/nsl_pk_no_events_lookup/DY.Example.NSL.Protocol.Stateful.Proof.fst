@@ -269,7 +269,7 @@ let send_msg2__proof tr global_sess_id bob msg_id =
       | Some msg1 -> (
       let alice = msg1.alice in
       let n_a = msg1.n_a in
-    let (n_b, tr) = mk_rand NoUsage (join (principal_label msg1.alice) (principal_label bob)) 32 tr in
+    let (n_b, tr) = mk_rand NoUsage (nonce_label msg1.alice bob) 32 tr in
     let (_, tr) = trigger_event bob (Responding alice bob n_a n_b) tr in
     let st = ResponderSendingMsg2 msg1.alice msg1.n_a n_b in
     let (sess_id, _) = new_session_id bob tr in

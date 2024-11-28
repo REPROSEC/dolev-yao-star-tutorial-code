@@ -134,7 +134,7 @@ val decode_message1_proof:
     match decode_message1 bob msg_cipher sk_b with
     | None -> True
     | Some msg1 -> (
-      is_knowable_by (join (principal_label msg1.alice) (principal_label bob)) tr msg1.n_a
+      is_knowable_by (nonce_label msg1.alice bob) tr msg1.n_a
       /\ (
         is_publishable tr msg1.n_a
         \/ state_was_set_some_id tr msg1.alice (InitiatorSendingMsg1 bob msg1.n_a)
@@ -158,9 +158,9 @@ val compute_message2_proof:
     // From the stateful code
     state_was_set_some_id tr bob (ResponderSendingMsg2 msg1.alice msg1.n_a n_b) /\
     // From decode_message1_proof
-    is_knowable_by (join (principal_label msg1.alice) (principal_label bob)) tr msg1.n_a /\
+    is_knowable_by (nonce_label msg1.alice bob) tr msg1.n_a /\
     // From the random generation
-    is_secret (join (principal_label msg1.alice) (principal_label bob)) tr n_b /\
+    is_secret (nonce_label msg1.alice bob) tr n_b /\
     // From the random generation
     is_secret (long_term_key_label bob) tr nonce /\
     // From the random generation
