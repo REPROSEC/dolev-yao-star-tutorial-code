@@ -5,6 +5,20 @@ open DY.Core
 open DY.Lib
 open DY.Core.Trace.Base
 
+
+val is_secret_is_knowable:
+  {|cinvs: crypto_invariants|} -> l:label -> tr:trace -> b:bytes ->
+  Lemma 
+  (requires is_secret l tr b)
+  (ensures is_knowable_by l tr b)
+  [SMTPat (is_secret #cinvs l tr b)]
+let is_secret_is_knowable #_ l tr b
+  = ()
+
+let rand_generated_before tr b = 
+  exists ts. rand_generated_at tr ts b
+
+
 let core_state_was_set_grows  tr1 tr2 prin sid cont:
   Lemma 
   (requires
@@ -36,19 +50,19 @@ let state_was_set_grows (#a:Type) {|ls:local_state a|} tr1 tr2 prin sid (cont : 
 let state_was_set_some_id (#a:Type) {|local_state a|} tr prin (cont : a) =
   exists sid. DY.Lib.state_was_set tr prin sid cont
 
-// val state_was_set_some_id_grows:
-//   #a:Type -> {|lsa:local_state a|} ->
-//   tr1:trace -> tr2:trace -> 
-//   prin:principal -> content:a ->
-//   Lemma
-//   (requires tr1 <$ tr2
-//     /\ state_was_set_some_id tr1 prin content
-//   )
-//   (ensures
-//     state_was_set_some_id tr2 prin content
-//   )
-//   [SMTPat (state_was_set_some_id #a #lsa tr1 prin content); SMTPat (tr1 <$ tr2)]
-// let state_was_set_some_id_grows #a #ls tr1 tr2 prin content  = ()
+val state_was_set_some_id_grows:
+  #a:Type -> {|lsa:local_state a|} ->
+  tr1:trace -> tr2:trace -> 
+  prin:principal -> content:a ->
+  Lemma
+  (requires tr1 <$ tr2
+    /\ state_was_set_some_id tr1 prin content
+  )
+  (ensures
+    state_was_set_some_id tr2 prin content
+  )
+  [SMTPat (state_was_set_some_id #a #lsa tr1 prin content); SMTPat (tr1 <$ tr2)]
+let state_was_set_some_id_grows #a #ls tr1 tr2 prin content  = admit()
 
 
 /// Lookup the most recent state of a principal satisfying some property.

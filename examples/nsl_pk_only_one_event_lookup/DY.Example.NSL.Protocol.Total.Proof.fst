@@ -17,24 +17,6 @@ open DY.Example.NSL.Protocol.Stateful
 
 (*** Cryptographic invariants ***)
 
-let state_was_set_some_id (#a:Type) {|local_state a|} tr prin (cont : a) =
-  exists sid. state_was_set tr prin sid cont
-
-val state_was_set_some_id_grows:
-  #a:Type -> {|lsa:local_state a|} ->
-  tr1:trace -> tr2:trace -> 
-  prin:principal -> content:a ->
-  Lemma
-  (requires tr1 <$ tr2
-    /\ state_was_set_some_id tr1 prin content
-  )
-  (ensures
-    state_was_set_some_id tr2 prin content
-  )
-  [SMTPat (state_was_set_some_id #a #lsa tr1 prin content); SMTPat (tr1 <$ tr2)]
-let state_was_set_some_id_grows #a #ls tr1 tr2 prin content  = admit()
-
-
 instance crypto_usages_nsl : crypto_usages = default_crypto_usages
 
 #push-options "--ifuel 2 --fuel 0"
@@ -80,17 +62,6 @@ instance crypto_invariants_nsl : crypto_invariants = {
 }
 
 (*** Proofs ***)
-
-let is_secret_is_knowable l tr b:
-  Lemma 
-  (requires is_secret l tr b)
-  (ensures is_knowable_by l tr b)
-  [SMTPat (is_secret l tr b)]
-  = ()
-
-let rand_generated_before tr b = 
-  exists ts. rand_generated_at tr ts b
-
 
 val compute_message1_proof:
   tr:trace ->
