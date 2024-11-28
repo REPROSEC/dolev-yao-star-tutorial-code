@@ -59,9 +59,11 @@ type nsl_global_sess_ids = {
   private_keys: state_id;
 }
 
+let nonce_label alice bob = join (principal_label alice) (principal_label bob)
+
 val prepare_msg1: principal -> principal -> traceful state_id
 let prepare_msg1 alice bob =
-  let* n_a = mk_rand NoUsage (join (principal_label alice) (principal_label bob)) 32 in
+  let* n_a = mk_rand NoUsage (nonce_label alice bob) 32 in
   let* sess_id = new_session_id alice in
   set_state alice sess_id (InitiatorSendingMsg1 bob n_a <: nsl_session);*
   return sess_id
@@ -79,7 +81,7 @@ let send_msg1 global_sess_id alice sess_id =
 
 val send_msg1_: nsl_global_sess_ids -> principal -> principal -> traceful (option (timestamp & state_id))
 let send_msg1_ global_sess_id alice bob =
-  let* n_a = mk_rand NoUsage (join (principal_label alice) (principal_label bob)) 32 in
+  let* n_a = mk_rand NoUsage (nonce_label alice bob) 32 in
 
   let* sess_id = new_session_id alice in
   let st = InitiatorSendingMsg1 bob n_a in
@@ -98,7 +100,7 @@ let prepare_msg2 global_sess_id bob msg_id =
   let*? msg = recv_msg msg_id in
   let*? sk_b = get_private_key bob global_sess_id.private_keys (LongTermPkeKey "NSL.PublicKey") in
   let*? msg1: message1 = return (decode_message1 bob msg sk_b) in
-  let* n_b = mk_rand NoUsage (join (principal_label msg1.alice) (principal_label bob)) 32 in
+  let* n_b = mk_rand NoUsage (nonce_label msg1.alice bob) 32 in
   trigger_event bob (Responding msg1.alice bob msg1.n_a n_b);*
   let* sess_id = new_session_id bob in
   set_state bob sess_id (ResponderSendingMsg2 msg1.alice msg1.n_a n_b <: nsl_session);*
@@ -124,7 +126,7 @@ let send_msg2_ global_sess_id bob msg_id =
 
   let alice = msg1.alice in
   let n_a = msg1.n_a in
-  let* n_b = mk_rand NoUsage (join (principal_label alice) (principal_label bob)) 32 in
+  let* n_b = mk_rand NoUsage (nonce_label alice bob) 32 in
   trigger_event bob (Responding alice bob n_a n_b);*
   
   let st = ResponderSendingMsg2 alice n_a n_b in

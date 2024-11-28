@@ -51,12 +51,12 @@ let crypto_predicates_nsl = {
         | Some (Msg1 msg1) -> (
           let (alice, bob) = (msg1.alice, prin) in
           state_was_set_some_id tr alice (InitiatorSendingMsg1 bob msg1.n_a)/\
-          get_label tr msg1.n_a == join (principal_label alice) (principal_label bob)
+          get_label tr msg1.n_a == nonce_label alice bob
         )
         | Some (Msg2 msg2) -> (
           let (alice, bob) = (prin, msg2.bob) in
           state_was_set_some_id tr bob (ResponderSendingMsg2 alice msg2.n_a msg2.n_b) /\
-          get_label tr msg2.n_b == join (principal_label alice) (principal_label bob)
+          get_label tr msg2.n_b == nonce_label alice bob
         )
         | Some (Msg3 msg3) -> (
           let bob = prin in
@@ -100,7 +100,7 @@ val compute_message1_proof:
     // From the stateful code
     state_was_set_some_id tr alice (InitiatorSendingMsg1 bob n_a)/\
     // From random generation
-    is_secret (join (principal_label alice) (principal_label bob)) tr n_a  /\
+    is_secret (nonce_label alice bob) tr n_a  /\
     // From random generation
     is_secret (long_term_key_label alice) tr nonce /\
     // From random generation
@@ -188,7 +188,7 @@ val decode_message2_proof:
   Lemma
   (requires
     // From the NSL state invariant
-    is_secret (join (principal_label alice) (principal_label bob)) tr n_a /\
+    is_secret (nonce_label alice bob) tr n_a /\
     // From the PrivateKeys invariant
     is_private_key_for tr sk_a (LongTermPkeKey "NSL.PublicKey") alice /\
     // From the network
@@ -198,11 +198,11 @@ val decode_message2_proof:
     match decode_message2 alice bob msg_cipher sk_a n_a with
     | None -> True
     | Some msg2 -> (
-      is_knowable_by (join (principal_label alice) (principal_label bob)) tr msg2.n_b 
+      is_knowable_by (nonce_label alice bob) tr msg2.n_b 
       /\ (
       (is_corrupt tr (principal_label alice) \/ is_corrupt tr (principal_label bob)) 
       \/ (
-      is_secret (join (principal_label alice) (principal_label bob)) tr msg2.n_b /\
+      is_secret (nonce_label alice bob) tr msg2.n_b /\
         state_was_set_some_id tr bob (ResponderSendingMsg2 alice n_a msg2.n_b)
       )
       )
@@ -230,7 +230,7 @@ val compute_message3_proof:
     // From the stateful code
     (exists n_a. state_was_set_some_id tr alice (InitiatorSendingMsg3 bob n_a n_b)) /\
     // From decode_message2_proof
-     is_knowable_by (join (principal_label alice) (principal_label bob)) tr n_b /\
+     is_knowable_by (nonce_label alice bob) tr n_b /\
     // From the random generation
     is_secret (long_term_key_label alice) tr nonce /\
     // From the random generation
@@ -258,7 +258,7 @@ val decode_message3_proof:
   Lemma
   (requires
     // From the NSL state invariant
-    get_label tr n_b == join (principal_label alice) (principal_label bob) /\
+    get_label tr n_b == nonce_label alice bob /\
     // From the PrivateKeys invariant
     is_private_key_for tr sk_b (LongTermPkeKey "NSL.PublicKey") bob /\
     // From the network
