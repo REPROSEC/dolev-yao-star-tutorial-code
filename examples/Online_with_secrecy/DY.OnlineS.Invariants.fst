@@ -104,7 +104,7 @@ instance crypto_invariants_p: crypto_invariants = {
 %splice [ps_received_ack_t_is_well_formed] (gen_is_well_formed_lemma (`received_ack_t))
 %splice [ps_state_t_is_well_formed] (gen_is_well_formed_lemma (`state_t))
 
-#push-options "--z3cliopt 'smt.qi.eager_threshold=50'"
+#push-options "--ifuel 2 --z3cliopt 'smt.qi.eager_threshold=50'"
 (* We restrict what states are allowed to be stored by principals *)
 let state_predicate_p: local_state_predicate state_t = {
   pred = (fun tr prin sess_id st ->
@@ -155,12 +155,7 @@ let state_predicate_p: local_state_predicate state_t = {
      the content of the state to be stored
      is readable by the storing principal
   *)
-  pred_knowable = (fun tr prin sess_id st -> 
-    match st with
-    | SentAck ack ->
-        parse_wf_lemma state_t (is_knowable_by (principal_label prin) tr) ack.n_a
-    | _ -> ()
-  );
+  pred_knowable = (fun tr prin sess_id st -> () );
 }
 #pop-options
 

@@ -5,17 +5,19 @@ open DY.Core
 open DY.Lib
 open DY.Core.Trace.Base
 
-
-val is_secret_is_knowable:
-  {|cinvs: crypto_invariants|} -> l:label -> tr:trace -> b:bytes ->
+val is_secret_is_knowable: 
+  {|cinvs: crypto_invariants|} ->
+  l:label  -> 
+  tr: trace ->
+  b:bytes ->
   Lemma 
   (requires is_secret l tr b)
   (ensures is_knowable_by l tr b)
   [SMTPat (is_secret #cinvs l tr b)]
-let is_secret_is_knowable #_ l tr b
-  = ()
+let is_secret_is_knowable l tr b = ()
 
 let rand_generated_before tr b = 
+  is_not_empty tr /\
   exists ts. rand_generated_at tr ts b
 
 
