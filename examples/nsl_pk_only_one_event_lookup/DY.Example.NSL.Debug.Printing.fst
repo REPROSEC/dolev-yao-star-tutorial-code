@@ -42,16 +42,16 @@ let session_to_string sess_bytes =
   let? sess = parse nsl_session sess_bytes in
   match sess with
   | InitiatorSendingMsg1 b n_a -> (
-    Some (Printf.sprintf "InitiatorSendingMsg1 [principal=%s, n_a=(%s)]" b (bytes_to_string n_a))
+    Some (Printf.sprintf "InitiatorSendingMsg1 [n_a=(%s), to=%s]" (bytes_to_string n_a) b)
   )
   | ResponderSendingMsg2 a n_a n_b -> (
-    Some (Printf.sprintf "ResponderSendingMsg2 [principal=%s, n_a=(%s), n_b=(%s)]" a (bytes_to_string n_a) (bytes_to_string n_b))
+    Some (Printf.sprintf "ResponderSendingMsg2 [n_a=(%s), n_b=(%s), to=%s]"(bytes_to_string n_a) (bytes_to_string n_b) a)
   )
   | InitiatorSendingMsg3 b n_a n_b -> (
-    Some (Printf.sprintf "InitiatorSendingMsg3 [principal=%s, n_a=(%s), n_b=(%s)]" b (bytes_to_string n_a) (bytes_to_string n_b))
+    Some (Printf.sprintf "InitiatorSendingMsg3 [n_a=(%s), n_b=(%s), to=%s]" (bytes_to_string n_a) (bytes_to_string n_b) b)
   )
   | ResponderReceivedMsg3 a n_a n_b -> (
-    Some (Printf.sprintf "ResponderReceivedMsg3 [principal=%s, n_a=(%s), n_b=(%s)]" a (bytes_to_string n_a) (bytes_to_string n_b))
+    Some (Printf.sprintf "ResponderReceivedMsg3 [n_a=(%s), n_b=(%s), from=%s]" (bytes_to_string n_a) (bytes_to_string n_b) a)
   )
 
 
@@ -65,7 +65,7 @@ let event_to_string event_bytes =
 //     Some (Printf.sprintf "[principal1=%s, principal2=(%s), n_b=(%s)]" a b (bytes_to_string n_a))
 //   )
   | Responding a b n_a n_b -> (
-    Some (Printf.sprintf "Responding [principal1=%s, principal2=(%s), n_a=(%s), n_b=(%s)]" a b (bytes_to_string n_a) (bytes_to_string n_b))
+    Some (Printf.sprintf "Responding [principal1=%s, n_a=(%s), n_b=(%s), to=%s]" b (bytes_to_string n_a) (bytes_to_string n_b) a)
   )
 //   | Initiate2 a b n_a n_b -> (
 //     Some (Printf.sprintf "[principal1=%s, principal2=(%s), n_a=(%s), n_b=(%s)]" a b (bytes_to_string n_a) (bytes_to_string n_b))

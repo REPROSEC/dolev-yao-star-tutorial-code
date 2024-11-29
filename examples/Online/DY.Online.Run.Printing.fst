@@ -21,9 +21,9 @@ let message_to_string b =
 val state_to_string: bytes -> option string
 let state_to_string b =
   match? parse state_t b with
-  | SentPing p -> Some (Printf.sprintf "SentPing [to = (%s), n_a = (%s)]" p.bob (bytes_to_string p.n_a))
-  | SentAck a -> Some (Printf.sprintf "SentAck [to = (%s), n_a = (%s)]" a.alice (bytes_to_string a.n_a))
-  | ReceivedAck r -> Some (Printf.sprintf "ReceivedAck [from = (%s), n_a = (%s)]" r.bob (bytes_to_string r.n_a))
+  | SentPing p -> Some (Printf.sprintf "SentPing [n_a = (%s), to = (%s)]" (bytes_to_string p.n_a) p.bob)
+  | SentAck a -> Some (Printf.sprintf "SentAck [n_a = (%s), to = (%s)]" (bytes_to_string a.n_a) a.alice)
+  | ReceivedAck r -> Some (Printf.sprintf "ReceivedAck [n_a = (%s), from = (%s)]" (bytes_to_string r.n_a) r.bob)
 
 
 

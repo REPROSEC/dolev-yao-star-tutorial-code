@@ -44,7 +44,7 @@ let nonce_label alice bob = join (principal_label alice) (principal_label bob)
 val send_ping: principal -> principal -> state_id -> traceful (option (state_id & timestamp))
 let send_ping alice bob keys_sid =
   // TODO: explain high-level idea of "intended readers"
-  let* n_a = gen_rand_labeled (join (principal_label alice) (principal_label bob)) in
+  let* n_a = gen_rand_labeled (nonce_label alice bob) in
   
   let ping = Ping {alice; n_a} in 
 

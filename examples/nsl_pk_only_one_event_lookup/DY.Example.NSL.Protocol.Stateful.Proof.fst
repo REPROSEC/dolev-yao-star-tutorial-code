@@ -25,25 +25,23 @@ let state_predicate_nsl: local_state_predicate nsl_session = {
     match st with
     | InitiatorSendingMsg1 bob n_a -> (
       let alice = prin in
-      is_knowable_by (join (principal_label alice) (principal_label bob)) tr n_a /\
-      is_secret (join (principal_label alice) (principal_label bob)) tr n_a /\
-      0 < DY.Core.Trace.Base.length tr /\
+      is_knowable_by (nonce_label alice bob) tr n_a /\
+      is_secret (nonce_label alice bob) tr n_a /\
       rand_generated_before tr n_a
     )
     | ResponderSendingMsg2 alice n_a n_b -> (
       let bob = prin in
-      is_knowable_by (join (principal_label alice) (principal_label bob)) tr n_a /\
-      is_knowable_by (join (principal_label alice) (principal_label bob)) tr n_b /\
+      is_knowable_by (nonce_label alice bob) tr n_a /\
+      is_knowable_by (nonce_label alice bob) tr n_b /\
       
       event_triggered tr bob (Responding alice bob n_a n_b)
-      // is_secret (join (principal_label alice) (principal_label bob)) tr n_b /\
-      //  0 < DY.Core.Trace.Base.length tr /\
+      // is_secret (nonce_label alice bob) tr n_b /\
       // rand_generated_before tr n_b
     )
     | InitiatorSendingMsg3 bob n_a n_b  -> (
       let alice = prin in
-      is_knowable_by (join (principal_label alice) (principal_label bob)) tr n_a /\
-       is_knowable_by (join (principal_label alice) (principal_label bob)) tr n_b /\
+      is_knowable_by (nonce_label alice bob) tr n_a /\
+       is_knowable_by (nonce_label alice bob) tr n_b /\
       
       state_was_set_some_id tr alice (InitiatorSendingMsg1 bob n_a) /\
       ( is_corrupt tr (principal_label alice) \/ is_corrupt tr (principal_label bob)
@@ -53,8 +51,8 @@ let state_predicate_nsl: local_state_predicate nsl_session = {
     )
     | ResponderReceivedMsg3 alice n_a n_b -> (
       let bob = prin in
-      is_knowable_by (join (principal_label alice) (principal_label bob)) tr n_a /\
-      is_knowable_by (join (principal_label alice) (principal_label bob)) tr n_b /\
+      is_knowable_by (nonce_label alice bob) tr n_a /\
+      is_knowable_by (nonce_label alice bob) tr n_b /\
       state_was_set_some_id tr bob (ResponderSendingMsg2 alice n_a n_b) /\
       (is_corrupt tr (principal_label alice) \/ is_corrupt tr (principal_label bob) 
       \/
@@ -81,9 +79,8 @@ let event_predicate_nsl: event_predicate nsl_event =
     match e with    
     | Responding alice bob n_a n_b -> (
       prin == bob /\
-      is_secret (join (principal_label alice) (principal_label bob)) tr n_b /\
-      0 < DY.Core.Trace.Base.length tr /\
-      rand_generated_at tr (DY.Core.Trace.Base.length tr - 1) n_b
+      is_secret (nonce_label alice bob) tr n_b /\
+      rand_just_generated tr n_b
     )
    
     
@@ -187,7 +184,7 @@ val send_msg1__proof:
     trace_invariant tr_out
   ))
 let send_msg1__proof tr global_sess_id alice bob =
-  let (n_a, tr) = mk_rand NoUsage (join (principal_label alice) (principal_label bob)) 32 tr in
+  let (n_a, tr) = mk_rand NoUsage (nonce_label alice bob) 32 tr in
   
   let (sess_id, _) = new_session_id alice tr in
   let st = InitiatorSendingMsg1 bob n_a in
@@ -269,7 +266,7 @@ let send_msg2__proof tr global_sess_id bob msg_id =
       | Some msg1 -> (
       let alice = msg1.alice in
       let n_a = msg1.n_a in
-    let (n_b, tr) = mk_rand NoUsage (join (principal_label msg1.alice) (principal_label bob)) 32 tr in
+    let (n_b, tr) = mk_rand NoUsage (nonce_label msg1.alice bob) 32 tr in
     let (_, tr) = trigger_event bob (Responding alice bob n_a n_b) tr in
     let st = ResponderSendingMsg2 msg1.alice msg1.n_a n_b in
     let (sess_id, _) = new_session_id bob tr in
