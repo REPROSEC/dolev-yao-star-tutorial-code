@@ -188,8 +188,7 @@ let event_predicate_event_t: event_predicate event_t =
         *)
         prin == alice /\
         is_secret (nonce_label alice bob) tr n_a /\
-        0 < DY.Core.Trace.Base.length tr /\
-        rand_generated_at tr (DY.Core.Trace.Base.length tr - 1) n_a
+        rand_just_generated tr n_a
     )
 
 (*** Trace invariants ***)
