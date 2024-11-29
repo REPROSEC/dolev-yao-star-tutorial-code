@@ -9,7 +9,7 @@ open DY.Extend
 
 open DY.OnlineA.Data
 
-/// Here we define the DY* mode of the "Online?" protocol,
+/// Here we define the DY* model of the "Online?" protocol,
 /// an extension of the simple Two Message protocol:
 /// the two messages are now (asymmetrically) encrypted
 ///
@@ -26,13 +26,21 @@ open DY.OnlineA.Data
 /// Additionally, there are two helper functions
 /// for steps 2 and 3 (`decode_ping` and `decode_ack`).
 
+
+/// ATTENTION: Compared to the model we used for the secrecy proof,
+/// we switch the order of sending the message and storing the states.
+/// That is, we first store the states and then send the message.
+/// This explains the renaming of the state constructors from
+/// "Sent" to "Sending" (as in "about to send").
+
 (*** Sending the Ping ***)
 
 /// Alice sends the first message to Bob:
 /// * Alice generates a new nonce [n_a]
+/// * triggers the Initiating event with Bob and n_a
+/// * stores n_a and Bob in a state (in a new session)
 /// * encrypts the message (Alice, n_a) for Bob
 /// * sends the encrypted message
-/// * stores n_a and Bob in a state (in a new session)
 /// The step returns the ID of the new state
 /// and the timestamp of the message on the trace
 /// The step fails, if
@@ -45,14 +53,19 @@ val send_ping: principal -> principal -> state_id -> traceful (option (state_id 
 let send_ping alice bob keys_sid =
   let* n_a = gen_rand_labeled (nonce_label alice bob) in
 
+  (* This is the new step of triggering the Initiating event.
+     ATTENTION: it has to be called right after generating the nonce
+     (for the event predicate we will see later)
+  *)
   trigger_event alice (Initiating {alice = alice; bob = bob; n_a = n_a});*
 
   let ping = Ping {alice; n_a} in 
 
+  // We now first store the state ...
   let ping_state = SendingPing {bob; n_a} in
   let* sid = start_new_session alice ping_state in
 
-  // encrypt the message for bob
+  // ... and then send the message.
   let*? ping_encrypted = pke_enc_for alice bob keys_sid key_tag ping in
   let* msg_ts = send_msg ping_encrypted in
  
@@ -110,9 +123,10 @@ let receive_ping_and_send_ack bob global_sids msg_ts =
 
   let ack = Ack {n_a} in
 
+  // again, we first store the state ...
   let* sess_id = start_new_session bob (SendingAck {alice; n_a}) in
   
-  // encrypt the reply for alice
+  // ... and then send the encrypted Ack
   let*? ack_encrypted = pke_enc_for bob alice global_sids.pki key_tag ack in
   let* ack_ts = send_msg ack_encrypted in
   

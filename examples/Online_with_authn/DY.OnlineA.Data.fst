@@ -67,7 +67,8 @@ instance parseable_serializeable_bytes_message_t: parseable_serializeable bytes 
 (*** State Type ***)
 
 /// As for the messages we define abstract state types
-/// for the three states stored by Alice and Bob after each step of the protocol.
+/// for the three states stored by Alice and Bob in each step of the protocol.
+///
 
 [@@ with_bytes bytes]
 type sent_ping_t = {
@@ -87,6 +88,13 @@ type received_ack_t = {
   n_a : bytes;
 }
 
+/// ATTENTION: We are now storing the states
+/// not at the *end* of the step (as in the model for the secrecy property) but
+/// in the beginning of the steps, i.e., before sending the corresponding messages.
+/// To make this difference more clear,
+/// we rename the state constructors from "Sent" to "Sending"
+/// with the intuition of "about to send".
+ 
 [@@ with_bytes bytes]
 type state_t = 
   | SendingPing: (ping:sent_ping_t) -> state_t
@@ -139,9 +147,13 @@ let key_tag = "P.Key"
 
 (*** Event type ***)
 
-/// Type for the NSL protocol events.
-/// They will be used to write authentication security properties.
+/// We are now using an event to show the authentication property
+/// and define an abstract event type
+/// just as for messages and states.
 
+/// The event is used to store (on the trace)
+/// that alice started a run with bob
+/// using the nonce n_a.
 [@@ with_bytes bytes]
 type ev_init_t = {
   alice:principal;

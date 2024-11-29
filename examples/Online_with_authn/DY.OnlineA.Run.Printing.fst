@@ -26,11 +26,17 @@ let state_to_string b =
   | ReceivedAck r -> Some (Printf.sprintf "ReceivedAck [n_a = (%s), from = (%s)]" (bytes_to_string r.n_a) r.bob)
 
 
-
+val event_to_string: bytes -> option string
+let event_to_string event_bytes =
+  let? event = parse event_t event_bytes in
+  match event with
+ | Initiating {alice; bob; n_a} -> (
+    Some (Printf.sprintf "Initiating [alice=%s, with=(%s), using n_b=(%s)]" alice bob (bytes_to_string n_a))
+  )
 
 val get_trace_to_string_printers: trace_to_string_printers
 let get_trace_to_string_printers  = 
   trace_to_string_printers_builder 
     message_to_string
     [(local_state_state.tag, state_to_string)]
-    []
+    [(event_event_t.tag, event_to_string)]
