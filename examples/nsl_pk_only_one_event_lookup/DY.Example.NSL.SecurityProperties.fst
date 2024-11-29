@@ -3,6 +3,9 @@ module DY.Example.NSL.SecurityProperties
 open Comparse
 open DY.Core
 open DY.Lib
+
+open DY.Extend
+
 open DY.Example.NSL.Protocol.Total.Proof
 open DY.Example.NSL.Protocol.Stateful
 open DY.Example.NSL.Protocol.Stateful.Proof
