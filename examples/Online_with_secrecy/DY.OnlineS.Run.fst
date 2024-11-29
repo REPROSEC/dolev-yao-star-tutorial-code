@@ -80,4 +80,4 @@ let run () : traceful (option unit ) =
 
   return (Some ())
 
-let _ = run () Nil
+let _ = run () empty_trace

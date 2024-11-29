@@ -27,7 +27,7 @@ let state_predicate_nsl: local_state_predicate nsl_session = {
       let alice = prin in
       is_knowable_by (nonce_label alice bob) tr n_a /\
       is_secret (nonce_label alice bob) tr n_a /\
-      0 < DY.Core.Trace.Base.length tr /\
+      is_not_empty tr /\
       rand_generated_before tr n_a
     )
     | ResponderSendingMsg2 alice n_a n_b -> (
@@ -37,7 +37,7 @@ let state_predicate_nsl: local_state_predicate nsl_session = {
       
       event_triggered tr bob (Responding alice bob n_a n_b)
       // is_secret (nonce_label alice bob) tr n_b /\
-      //  0 < DY.Core.Trace.Base.length tr /\
+      //  is_not_empty tr /\
       // rand_generated_before tr n_b
     )
     | InitiatorSendingMsg3 bob n_a n_b  -> (
@@ -82,8 +82,7 @@ let event_predicate_nsl: event_predicate nsl_event =
     | Responding alice bob n_a n_b -> (
       prin == bob /\
       is_secret (nonce_label alice bob) tr n_b /\
-      0 < DY.Core.Trace.Base.length tr /\
-      rand_generated_at tr (DY.Core.Trace.Base.length tr - 1) n_b
+      rand_just_generated tr n_b
     )
    
     

@@ -43,4 +43,4 @@ let run () : traceful (option unit ) =
 
 /// Call `run` when the module loads
 
-let _ = run () Nil
+let _ = run () empty_trace
