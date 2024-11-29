@@ -6,39 +6,16 @@ open DY.Lib
 
 #set-options "--fuel 3 --ifuel 1 --z3rlimit 25  --z3cliopt 'smt.qi.eager_threshold=100'"
 
-
-let rec trace_from_rev_list (ens: list trace_entry) : trace =
-  match ens with
-  | [] -> Nil
-  | hd::tl -> Snoc (trace_from_rev_list tl ) hd
-
-open FStar.List.Tot.Base
-
-let trace_from_list ens = trace_from_rev_list (rev ens)
-
-let _ = 
-  let ev1 = Corrupt 1 in
-  let ev2 = Corrupt 2 in
-  let ens = [ev1; ev2] in
-  let tr_rev = trace_from_rev_list ens in
-  assert(tr_rev == Snoc (Snoc Nil ev2) ev1);
-
-  let tr = trace_from_list ens in
-  assert(tr == Snoc (Snoc Nil ev1) ev2)
-
-
-#push-options "--fuel 1"
 val add_entry_: trace_entry -> traceful (option unit)
 let add_entry_ e tr =
   reveal_opaque (`%grows) (grows #label);
   norm_spec [zeta; delta_only [`%prefix]] (prefix #label);
   (Some (), Snoc tr e)
-#pop-options
-
-let en = Corrupt 1
 
 
 (*** Composition in the traceful + option monad ***)
+
+let en = Corrupt 1
 
 let f (x:nat) : traceful (option string) =
   if x < 2 
@@ -69,7 +46,7 @@ let f3''' :traceful (option string) =
   f 1
 
 let _ = 
-  let t = trace_from_list [] in
+  let t = empty_trace in
 
   let (opt_s1, t1) = f 1 t in
   assert(Some? opt_s1);
