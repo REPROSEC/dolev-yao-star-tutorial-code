@@ -81,17 +81,6 @@ instance crypto_invariants_nsl : crypto_invariants = {
 
 (*** Proofs ***)
 
-let is_secret_is_knowable l tr b:
-  Lemma 
-  (requires is_secret l tr b)
-  (ensures is_knowable_by l tr b)
-  [SMTPat (is_secret l tr b)]
-  = ()
-
-let rand_generated_before tr b = 
-  exists ts. rand_generated_at tr ts b
-
-
 val compute_message1_proof:
   tr:trace ->
   alice:principal -> bob:principal -> pk_b:bytes -> n_a:bytes -> nonce:bytes ->
