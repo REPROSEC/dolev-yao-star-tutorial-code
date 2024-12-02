@@ -28,7 +28,7 @@ val responder_authentication:
      is_corrupt tr (principal_label alice) \/ is_corrupt tr (principal_label bob) \/
      state_was_set_some_id tr bob (SendingAck {alice; n_a})
   )
-let authn tr alice bob n_a = ()
+let responder_authentication tr alice bob n_a = ()
 
 
 /// We still have nonce secrecy:
