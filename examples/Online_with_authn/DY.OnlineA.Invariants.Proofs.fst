@@ -193,14 +193,13 @@ let decode_ack_proof tr alice keys_sid msg =
         let plain = serialize message_t (Ack ack) in
         parse_wf_lemma message_t (bytes_invariant tr) plain;
         FStar.Classical.move_requires (parse_wf_lemma message_t (is_publishable tr)) plain
-        
     )
   
 
 /// Additionally,
 /// we need an injectivity lemma.
 /// The goal is to show that Alice uses the nonces n_a
-/// only once, i.e., the nonce n_a are unique for every run.
+/// only once, i.e., the nonces n_a are unique for every run.
 ///
 /// We show this with the help of the Initiating event:
 /// If there are two events triggered by the same Alice
@@ -223,7 +222,7 @@ val event_initiating_injective:
   (requires
     trace_invariant tr /\
     event_triggered tr alice (Initiating {alice; bob; n_a} ) /\
-    event_triggered tr alice (Initiating {alice; bob =bob'; n_a} )
+    event_triggered tr alice (Initiating {alice; bob = bob'; n_a} )
   )
   (ensures
     bob == bob'
@@ -304,7 +303,8 @@ let receive_ack_invariant alice keys_sid msg_ts tr =
                   // from the state predicate of the looked up SendingPing state of Alice:
                   assert(event_triggered tr alice (Initiating {alice; bob;n_a}));
 
-                  // from the state predicate of the SendingAck state of bob':
+                  // from the state predicate of the SendingAck state of bob'
+                  // (via the state prediate for the SendinPing state of Alice with bob'):
                   assert(event_triggered tr alice (Initiating {alice; bob = bob'; n_a} ));
 
                   // the injectivity lemma from above, yields bob' = bob

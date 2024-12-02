@@ -1,4 +1,4 @@
-module DY.OnlineA.Authn
+module DY.OnlineA.Properties
 
 open Comparse
 open DY.Core
@@ -15,7 +15,7 @@ open DY.OnlineA.Invariants
 /// i.e., Bob sent n_a in an acknowledgement to Alice.
 /// Unless one of Alice or Bob are corrupt.
 
-val authn:
+val responder_authentication:
   tr:trace -> 
   alice:principal -> bob:principal ->
   n_a:bytes ->

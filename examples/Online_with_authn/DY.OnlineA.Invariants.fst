@@ -19,14 +19,13 @@ open DY.OnlineA.Protocol
 ///   * event invariants
 ///
 /// We then have to show
-/// * these invariants imply the secrecy property (see DY.OnlineS.Secrecy) and
+/// * these invariants imply the security properties: responder authentication and nonce secrecy (see DY.OnlineS.Properties) and
 /// * every protocol step maintains these invariants (see DY.OnlineS.Invariants.Proofs)
 /// With this, we then know that
-/// the protocol model satisfies the secrecy property.
+/// the protocol model satisfies the security properties.
 
 /// We highlight only the differences to
 /// the invariants for the nonce secrecy proof (Online_with_secrecy/DY.OnlineS.Invariants.fst)
-/// 
 
 (*** Crypto Invariants ***)
 
@@ -134,12 +133,6 @@ let state_predicate_p: local_state_predicate state_t = {
         )
     )
     | ReceivedAck rack  -> (
-        (* a ReceivedAck state may only be stored if
-           the stored nonce is labeled for
-           * the storing principal (alice)
-           * the principal stored in the state
-             (the expected sender of the Ack)
-        *)
         let alice = prin in
         let bob = rack.bob in
         let n_a = rack.n_a in
@@ -168,7 +161,7 @@ let state_predicate_p: local_state_predicate state_t = {
 /// we also have prediates on events.
 /// The intuition is similar:
 /// They say when an event is allowed to be triggered, or
-/// what guarantees we obtain, if we observe an event on the trace.
+/// what guarantees we obtain, if we observe a specific event on the trace.
 
 let event_predicate_event_t: event_predicate event_t =
   fun tr prin e ->
@@ -215,11 +208,6 @@ let trace_invariants_p: trace_invariants = {
 
 
 (*** Protocol Invariants ***)
-
-/// The final protocol invariants
-/// consisting of
-/// * the crypto invariants and
-/// * the trace invariants
 
 instance protocol_invariants_p: protocol_invariants = {
   crypto_invs = crypto_invariants_p;
