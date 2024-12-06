@@ -78,9 +78,9 @@ let send_ping alice bob keys_sid =
 /// Bob receives the first messages and replies:
 /// * read the message from the trace
 /// * decrypt the message to (Alice, n_a)
+/// * store n_a and Alice in a state in a new session
 /// * encrypt the reply (n_a) for Alice
 /// * send the encrypted reply
-/// * store n_a and Alice in a state in a new session
 /// The step returns the ID of the new state
 /// and the timestamp of the reply on the trace.
 /// The step fails, if one of
@@ -97,17 +97,10 @@ let send_ping alice bob keys_sid =
 
 val decode_ping : principal -> state_id -> bytes -> traceful (option ping_t)
 let decode_ping bob keys_sid msg =
-  // try to decrypt the message with
-  // a private key of bob with the protocol tag
-  // (fails, if no such key exists)
   let*? png = pke_dec_with_key_lookup #message_t bob keys_sid key_tag msg in
   
-  // check that the decrypted message is of the right type
-  // (otherwise fail)
   guard_tr (Ping? png);*?
 
-  // return the content of the message 
-  // (i.e., strip the Ping constructor)
   return (Some (Ping?.ping png))
 
 /// Now the actual receive and reply step
@@ -115,7 +108,6 @@ let decode_ping bob keys_sid msg =
 val receive_ping_and_send_ack: principal -> global_sess_ids -> timestamp -> traceful (option (state_id & timestamp))
 let receive_ping_and_send_ack bob global_sids msg_ts =
   let*? msg = recv_msg msg_ts in
-  // decode the received expected ping
   let*? png = decode_ping bob global_sids.private_keys msg in
 
   let n_a = png.n_a in
@@ -156,21 +148,16 @@ let receive_ping_and_send_ack bob global_sids msg_ts =
 
 val decode_ack : principal -> state_id -> bytes -> traceful (option ack_t)
 let decode_ack alice keys_sid cipher =
-  // try to decrypt the message with
-  // a private key of alice with the protocol tag
   let*? ack = pke_dec_with_key_lookup #message_t alice keys_sid key_tag cipher in
 
-  // check that the decrypted message is of the Ack type
   guard_tr (Ack? ack);*?
 
-  // return the content of the message
   return (Some (Ack?.ack ack))
 
 /// The actual protocol step using the decode function
 val receive_ack: principal -> state_id -> timestamp -> traceful (option state_id)
 let receive_ack alice keys_sid ack_ts =
   let*? msg = recv_msg ack_ts in
-  // decode the received expected ack
   let*? ack = decode_ack alice keys_sid msg in
 
   let n_a = ack.n_a in

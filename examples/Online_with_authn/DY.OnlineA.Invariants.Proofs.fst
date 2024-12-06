@@ -257,22 +257,6 @@ val event_initiating_injective:
   )
 let event_initiating_injective tr alice bob bob' n_a = ()
 
-val event_initiating_injective_:
-  tr:trace ->
-  alice:principal -> alice':principal -> bob:principal -> bob':principal ->
-  n_a:bytes ->
-  Lemma
-  (requires
-    trace_invariant tr /\
-    event_triggered tr alice (Initiating {alice; bob; n_a} ) /\
-    event_triggered tr alice' (Initiating {alice =alice'; bob =bob'; n_a} )
-  )
-  (ensures
-    alice == alice' /\
-    bob == bob'
-  )
-let event_initiating_injective_ tr alice alice' bob bob' n_a = ()
-
 
 /// The invariant lemma for the final protocol step `receive_ack_invariant`
 
