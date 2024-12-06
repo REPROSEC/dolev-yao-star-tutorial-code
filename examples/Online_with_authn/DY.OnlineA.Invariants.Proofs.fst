@@ -49,6 +49,20 @@ let send_ping_invariant_short_version alice bob keys_sid  tr =
 
 (*** Replying to a Ping maintains the invariants ***)
 
+
+val decode_ping_invariant:
+  bob:principal -> keys_sid:state_id ->
+  msg:bytes ->
+  tr:trace ->
+  Lemma
+  (requires trace_invariant tr)
+  (ensures (
+    let (_, tr_out) = decode_ping bob keys_sid msg tr in
+    trace_invariant tr_out
+  ))
+let decode_ping_invariant bob keys_sid msg tr = ()
+
+
 val decode_ping_proof:
   tr:trace ->
   bob:principal -> keys_sid:state_id ->
@@ -157,6 +171,20 @@ let receive_ping_and_send_ack_invariant bob bob_keys_sid msg_ts tr =
 
 
 (*** Receiving an Ack maintains the invariants ***)
+
+
+val decode_ack_invariant:
+  alice:principal -> keys_sid:state_id -> cipher:bytes ->
+  tr:trace ->
+  Lemma
+  (requires
+    trace_invariant tr
+  )
+  (ensures (
+    let (_, tr_out) = decode_ack alice keys_sid cipher tr in
+    trace_invariant tr_out
+  ))
+let decode_ack_invariant alice keys_sid msg tr = ()
 
 
 /// Since we now have a non-trivial property for the ReceivedAck state,
