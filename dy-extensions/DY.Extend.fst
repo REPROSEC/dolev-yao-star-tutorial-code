@@ -64,9 +64,8 @@ val state_was_set_some_id_grows:
     state_was_set_some_id tr2 prin content
   )
   [SMTPat (state_was_set_some_id #a #lsa tr1 prin content); SMTPat (tr1 <$ tr2)]
-let state_was_set_some_id_grows #a #ls tr1 tr2 prin content  = admit()
-
-
+let state_was_set_some_id_grows #a #ls tr1 tr2 prin content  = 
+  assert(exists sid. DY.Lib.state_was_set tr1 prin sid content)
 
 val empty_invariants:
   {| protocol_invariants |} ->
