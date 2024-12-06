@@ -67,6 +67,14 @@ let state_was_set_some_id (#a:Type) {|local_state a|} tr prin (cont : a) =
 // let state_was_set_some_id_grows #a #ls tr1 tr2 prin content  = ()
 
 
+
+val empty_invariants:
+  {| protocol_invariants |} ->
+  Lemma (trace_invariant empty_trace)
+let empty_invariants #pinvs = 
+  normalize_term_spec trace_invariant
+
+
 /// Lookup the most recent state of a principal satisfying some property.
 /// Returns the state and corresponding state id,
 /// or `None` if no such state exists.
