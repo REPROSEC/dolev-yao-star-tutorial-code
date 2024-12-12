@@ -26,6 +26,9 @@ open DY.OnlineA.Data
 /// Additionally, there are two helper functions
 /// for steps 2 and 3 (`decode_ping` and `decode_ack`).
 
+/// We only highlight the differences to the previous model
+/// for nonce secrecy.
+
 (*** Sending the Ping ***)
 
 /// Alice sends the first message to Bob:
@@ -43,7 +46,6 @@ let nonce_label alice bob = join (principal_label alice) (principal_label bob)
 
 val send_ping: principal -> principal -> state_id -> traceful (option (state_id & timestamp))
 let send_ping alice bob keys_sid =
-  // TODO: explain high-level idea of "intended readers"
   let* n_a = gen_rand_labeled (nonce_label alice bob) in
 
   (* This is the new step of triggering the Initiating event.
@@ -54,7 +56,6 @@ let send_ping alice bob keys_sid =
 
   let ping = Ping {alice; n_a} in 
 
-  // encrypt the message for bob
   let*? ping_encrypted = pke_enc_for alice bob keys_sid key_tag ping in
   let* msg_ts = send_msg ping_encrypted in
 
@@ -89,17 +90,10 @@ let send_ping alice bob keys_sid =
 
 val decode_ping : principal -> state_id -> bytes -> traceful (option ping_t)
 let decode_ping bob keys_sid msg =
-  // try to decrypt the message with
-  // a private key of bob with the protocol tag
-  // (fails, if no such key exists)
   let*? png = pke_dec_with_key_lookup #message_t bob keys_sid key_tag msg in
   
-  // check that the decrypted message is of the right type
-  // (otherwise fail)
   guard_tr (Ping? png);*?
 
-  // return the content of the message 
-  // (i.e., strip the Ping constructor)
   return (Some (Ping?.ping png))
 
 /// Now the actual receive and reply step
@@ -107,16 +101,16 @@ let decode_ping bob keys_sid msg =
 val receive_ping_and_send_ack: principal -> global_sess_ids -> timestamp -> traceful (option (state_id & timestamp))
 let receive_ping_and_send_ack bob global_sids msg_ts =
   let*? msg = recv_msg msg_ts in
-  // decode the received expected ping
   let*? png = decode_ping bob global_sids.private_keys msg in
 
   let n_a = png.n_a in
   let alice = png.alice in
   
+  (* This is the new step, where Bob triggers the Responding event for the current run
+  *)
   trigger_event bob (Responding {alice = alice; bob = bob; n_a = n_a});* 
 
   let ack = Ack {n_a} in
-  // encrypt the reply for alice
   let*? ack_encrypted = pke_enc_for bob alice global_sids.pki key_tag ack in
   let* ack_ts = send_msg ack_encrypted in
   
@@ -148,21 +142,16 @@ let receive_ping_and_send_ack bob global_sids msg_ts =
 
 val decode_ack : principal -> state_id -> bytes -> traceful (option ack_t)
 let decode_ack alice keys_sid cipher =
-  // try to decrypt the message with
-  // a private key of alice with the protocol tag
   let*? ack = pke_dec_with_key_lookup #message_t alice keys_sid key_tag cipher in
 
-  // check that the decrypted message is of the Ack type
   guard_tr (Ack? ack);*?
 
-  // return the content of the message
   return (Some (Ack?.ack ack))
 
 /// The actual protocol step using the decode function
 val receive_ack: principal -> state_id -> timestamp -> traceful (option state_id)
 let receive_ack alice keys_sid ack_ts =
   let*? msg = recv_msg ack_ts in
-  // decode the received expected ack
   let*? ack = decode_ack alice keys_sid msg in
 
   let n_a = ack.n_a in

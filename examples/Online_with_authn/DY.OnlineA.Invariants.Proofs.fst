@@ -20,18 +20,11 @@ open DY.OnlineA.Invariants
 /// For every step s we show a lemma of the form:
 /// trace_invariant tr ==> trace_invariant ( trace after step s )
 
+/// Again, we only highlight the differences to the previous model
+/// for nonce secrecy.
 
 (*** Sending a Ping maintains the invariants ***)
 
-
-
-(* The above proof was very detailed.
-   In fact, most of the proof is done automatically by F*
-   and we can remove all of the asserts.
-
-   If we just keep the necessary calls to lemmas,
-   we end up with the following very short proof.
-*)
 val send_ping_invariant_short_version:
   alice:principal -> bob:principal -> keys_sid:state_id ->
   tr:trace ->
@@ -44,6 +37,9 @@ val send_ping_invariant_short_version:
   ))
 let send_ping_invariant_short_version alice bob keys_sid  tr =
   let (n_a, tr_rand) = gen_rand_labeled (nonce_label alice bob) tr in
+  (* We need to adapt the proof to the new send_ping function,
+     where we trigger the Initiating event right after nonce generation.
+  *)
   let (_, tr_ev) = trigger_event alice (Initiating {alice; bob; n_a}) tr_rand in
   let ping = Ping {alice; n_a} in 
   serialize_wf_lemma message_t (is_knowable_by (nonce_label alice bob) tr_ev) ping;
@@ -86,7 +82,7 @@ val decode_ping_proof:
     | (Some png, _) -> (
         let n_a = png.n_a in
         bytes_invariant tr n_a /\
-//        is_knowable_by (nonce_label png.alice bob) tr n_a /\
+        is_knowable_by (nonce_label png.alice bob) tr n_a /\
         ( is_publishable tr n_a
         \/ (pke_pred.pred tr (long_term_key_type_to_usage (LongTermPkeKey key_tag) bob) (serialize message_t (Ping png)))
         )
@@ -107,6 +103,8 @@ let decode_ping_proof tr bob keys_sid msg =
 
 /// The invariant lemma for the `receive_ping_and_send_ack` step
 
+
+#push-options "--z3rlimit 30"
 val receive_ping_and_send_ack_invariant:
   bob:principal -> keys_sid:global_sess_ids -> ts:timestamp ->
   tr:trace ->
@@ -118,110 +116,73 @@ val receive_ping_and_send_ack_invariant:
     trace_invariant tr_out
   ))
 let receive_ping_and_send_ack_invariant bob bob_keys_sid msg_ts tr =
-  (* As for the first protocol step,
-     we need to show that every traceful action 
-     maintains the trace invariant.
-  *)
-  match recv_msg msg_ts tr with // unfold the traceful + option let
-  | (None, _ ) -> () // in this case the trace is not changed and hence the trace invariant is trivially satisfied
+  match recv_msg msg_ts tr with
+  | (None, _ ) -> ()
   | (Some msg, _) -> (
-      (* From the lemma `recv_msg_same_trace` in `DY.Core.Trace.Manipulation` 
-         we have that the receive function does not change the trace
-         and hence the trace invariant is still satisfied. *)
-      match decode_ping bob bob_keys_sid.private_keys msg tr with // unfold the next monadic let
-      | (None, _) -> () // Again, if decoding fails, the trace is not changed and hence nothing left to show
+      match decode_ping bob bob_keys_sid.private_keys msg tr with
+      | (None, _) -> ()
       | (Some png, _) -> (
-          (* Decoding the ping message does not change the trace.
-             So we are still working on the input trace tr,
-             for which we know the trace invariant.
-
-             That decoding doesn't change the trace,
-             is shown automatically 
-             with corresponding SMT patterns for the individual steps of the function.
-             I.e., try uncommenting the following lemma:
-           *) 
-             // let decode_ping_same_trace
-             //    (p:principal) (keys_sid:state_id) (msg:bytes) (tr:trace) :
-             //    Lemma (
-             //       let (_, tr_out) = decode_ping p keys_sid msg tr in
-             //       tr_out == tr )
-             //    = () in
-          
           let n_a = png.n_a in
           let alice = png.alice in
           
           let ack = Ack {n_a} in
 
+          (* We need to adapt the proof to the new receive_ping_and_send_ack function,
+             where Bob triggers a Responding event.
+          *)
           let (_, tr_ev) = trigger_event bob (Responding {alice; bob; n_a}) tr in
+
+          (* We have to show,
+             that the new trace tr_ev satisfies the trace invariants, i.e.,
+             that the event prediate is satisfied for the Responding event.
+
+             The event prediate says:
+             if the nonce n_a has not leaked,
+             alice should have triggered an Initiating event.
+
+             We get this guarantee from our helper lemma decode_ping_proof:
+             The post-condition says
+             if the nonce has not leaked,
+             the pke_pred holds for the received Ping message.
+
+             Looking at the pke_pred for the Ping,
+             we get that alice must have triggered an Initiating event.
+          *)
           decode_ping_proof tr bob bob_keys_sid.private_keys msg;
+          (* We thus get that the trace invariant is satisfied after triggering the event.
+          *)
           assert(trace_invariant tr_ev);
 
           match pke_enc_for bob alice bob_keys_sid.pki key_tag ack tr_ev with
           | (None, _) -> ()
           | (Some ack_encrypted, tr_ack) ->(
-                (* As before, encryption maintains the trace invariant 
-                   (see `pke_enc_for_invariant` in `DY.simplified`) *)
                 assert(trace_invariant tr_ack);
 
                 let (ack_ts, tr_msg) = send_msg ack_encrypted tr_ack in
-                (* The same as in the first protocol step:
-                   we want to use the lemma `send_msg_invariant` from `DY.Core.Trace.Manipulation`
-                   to show that sending the encrypted ack maintains the invariant.
-
-                   For this, we need to show that the encrypted ack is publishable.
-                   Again, we want to apply the lemma `pke_enc_for_is_publishable` from `DY.Simplified`.
-                   So we have to show all of the pre-conditions of this lemma.
-                *)
-                  (* `trace_invariant tr` and `has_pki_invariant` are satisfied *)
-                  (* For `bytes_invariant` of the serialized ack,
-                     we need a helper lemma.
-
-                     TODO ....
-                  *)
-                  decode_ping_proof tr bob bob_keys_sid.private_keys msg;
-                  serialize_wf_lemma message_t (bytes_invariant tr) (ack);
-                  assert(bytes_invariant tr (serialize message_t ack));
-                  (* From this helper lemma, we also get
-                     that the nonce is readable by alice and bob.
-
-                     We use this fact together with a comparse lemma,
-                     to show the next two requirements:
-                     the serialized ack is readable by alice and bob 
-                     (again ignoring the `long_term_key_label`) *)
-                  assert(is_knowable_by (nonce_label alice bob) tr n_a);
                   serialize_wf_lemma message_t (is_knowable_by (nonce_label alice bob) tr) ack;
 
-                  (* The final requirement is trivially satisfied, 
-                     since the pke_pred for an Ack is just True
+                  (* The final requirement for the pke_enc_for_is_publishable lemma is
+                     that the pke_pred for the Ack is satisfied.
+                     Previously this was trivially true, since we didn't have any restrictions.
+
+                     Now, we need to show that
+                     there is some Bob that triggered a Responding event.
+                     We did that just before the call to the encryption.
+                     Hence this is again immediately satisfied.
 
                      You can check:
                      assert(pke_pred.pred tr (long_term_key_type_to_usage (LongTermPkeKey key_tag) alice) (serialize message_t ack));
                   *)
-                  assert(is_publishable tr n_a \/ event_triggered tr alice (Initiating {alice; bob; n_a}));
-                  assert(pke_pred.pred tr_ev (long_term_key_type_to_usage (LongTermPkeKey key_tag) alice) (serialize message_t ack));
-                (* Thus, we can call `pke_enc_for_is_publishable`
-                   to get the missing pre-condition for `send_msg_invariant`.*)
                 pke_enc_for_is_publishable tr_ev bob alice bob_keys_sid.pki key_tag ack;
                 assert(trace_invariant tr_msg);
 
-                (* As in the first protocol step,
-                   starting a new session maintains the trace invariant,
-                   if the new state satisfies the state predicate.
-
-                   For the new SentAck state, this means that
-                   the stored nonce
-                   must be readble by
-                   the storing principal (here bob).
-
-                   We get this property from our helper lemma `decode_ping_proof`.
-                *)
                 let st = (SentAck {alice = png.alice; n_a = png.n_a}) in
                 let (sess_id, tr_sess) = start_new_session bob st tr_msg in
                 assert(trace_invariant tr_sess)
            )
       )
   )
-
+#pop-options
 
 
 (*** Receiving an Ack maintains the invariants ***)
@@ -313,7 +274,7 @@ let event_initiating_injective tr alice bob bob' n_a = ()
 
 /// The invariant lemma for the final protocol step `receive_ack_invariant`
 
-#push-options "--ifuel 2 --z3rlimit 30"
+#push-options "--ifuel 2 --z3rlimit 35"
 val receive_ack_invariant:
   alice:principal -> keys_sid:state_id -> msg_ts:timestamp ->
   tr:trace ->
@@ -351,31 +312,28 @@ let receive_ack_invariant alice keys_sid msg_ts tr =
               (* the more difficult case is the honest case,
                  when the nonce is not publishable
               *)
-              introduce ~(is_publishable tr n_a) ==> 
-                // state_was_set_some_id tr bob (SentAck {alice; n_a})
-                event_triggered tr bob (Responding {alice; bob; n_a})
+              introduce ~(is_publishable tr n_a) ==> event_triggered tr bob (Responding {alice; bob; n_a})
               with _. (
                 decode_ack_proof tr alice keys_sid msg;
+                assert(pke_pred.pred tr (long_term_key_type_to_usage (LongTermPkeKey key_tag) alice) (serialize message_t (Ack ack)));
+                assert(exists bob'. event_triggered tr bob (Responding {alice; bob = bob'; n_a}));
                 (* From the pke_pred for the decoded Ack,
-                   we get that there is some bob' that set a SendingAck state.
+                   we get that there is some bob' that 
+                   triggered a Responding event with Alice and n_a.
                    So, we need to show, that this bob' is 
                    the same as the bob stored in Alice's SendPing state.
-
-                   We get this from the nonce injectivity from above.
                 *)
-                assert(pke_pred.pred tr (long_term_key_type_to_usage (LongTermPkeKey key_tag) alice) (serialize message_t (Ack ack)));
-                assert(~((get_label tr n_a) `can_flow tr` public));
-                assert(exists bob'. event_triggered tr bob (Responding {alice; bob = bob'; n_a}));
+                (* The event prediate for the Responding event of bob'
+                   guarantees, that alice must have triggered an Initiating event 
+                   containing bob'.
+                *)
                 assert(exists bob'. event_triggered tr alice (Initiating {alice; bob = bob'; n_a}));
+                (* We now use nonce injectivity from above to show that bob' = bob. *)
                 eliminate exists bob'. event_triggered tr alice (Initiating {alice; bob = bob'; n_a})
                 returns _
                 with _. (
                   // from the state predicate of the looked up SendingPing state of Alice:
-                  assert(event_triggered tr alice (Initiating {alice; bob;n_a}));
-
-                  // from the state predicate of the SendingAck state of bob'
-                  // (via the state prediate for the SendinPing state of Alice with bob'):
-                  assert(event_triggered tr alice (Initiating {alice; bob = bob'; n_a} ));
+                  assert(event_triggered tr alice (Initiating {alice; bob; n_a}));
 
                   // the injectivity lemma from above, yields bob' = bob
                   event_initiating_injective tr alice bob bob' n_a

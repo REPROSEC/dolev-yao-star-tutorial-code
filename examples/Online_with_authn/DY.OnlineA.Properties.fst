@@ -26,7 +26,6 @@ val responder_authentication:
   )
   (ensures
      is_corrupt tr (principal_label alice) \/ is_corrupt tr (principal_label bob) \/
-     //state_was_set_some_id tr bob (SentAck {alice; n_a})
      event_triggered tr bob (Responding {alice; bob; n_a})
   )
 let responder_authentication tr alice bob n_a = ()

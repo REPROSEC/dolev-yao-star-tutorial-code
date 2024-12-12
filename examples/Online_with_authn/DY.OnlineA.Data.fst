@@ -141,38 +141,49 @@ let key_tag = "P.Key"
 
 (*** Event type ***)
 
-/// We are now using an event to show the authentication property
-/// and define an abstract event type
-/// just as for messages and states.
+/// We are now using events to show the authentication property.
+/// We will have two events for the first two protocol steps,
+/// i.e., there is an Initiating event
+/// that Alice triggers, when she starts a new run
+/// and a Responding event,
+/// that Bob triggers, when he replies to a Ping with an Ack.
 
-/// The event is used to store (on the trace)
-/// that alice started a run with bob
-/// using the nonce n_a.
+/// Just as for messages and states,
+/// we define abstract event types
+
+
+
+/// The abstract type of the Initiating event
 [@@ with_bytes bytes]
 type ev_init_t = {
   alice:principal;
   bob:principal;
   n_a:bytes
 }
-%splice [ps_ev_init_t] (gen_parser (`ev_init_t))
 
+/// The abstract type of the Responding event
 [@@ with_bytes bytes]
 type ev_respond_t = {
   alice:principal;
   bob:principal;
   n_a:bytes
 }
-%splice [ps_ev_respond_t] (gen_parser (`ev_respond_t))
 
-
+/// The overall event type
 [@@ with_bytes bytes]
 type event_t =
   | Initiating: ev_init_t -> event_t
   | Responding: ev_respond_t -> event_t
 
+
+/// Using Comparse to generate parser and serializer for the abstract event types
+%splice [ps_ev_init_t] (gen_parser (`ev_init_t))
+%splice [ps_ev_respond_t] (gen_parser (`ev_respond_t))
 %splice [ps_event_t] (gen_parser (`event_t))
 %splice [ps_event_t_is_well_formed] (gen_is_well_formed_lemma (`event_t))
 
+
+/// Make the overall event type an instance of DY.Lib event class
 instance event_event_t: event event_t = {
   tag = "P.Event";
   format = mk_parseable_serializeable ps_event_t;

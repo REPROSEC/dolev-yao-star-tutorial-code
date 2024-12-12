@@ -25,6 +25,11 @@ let state_to_string b =
   | SentAck a -> Some (Printf.sprintf "SentAck [n_a = (%s), to = (%s)]" (bytes_to_string a.n_a) a.alice)
   | ReceivedAck r -> Some (Printf.sprintf "ReceivedAck [n_a = (%s), from = (%s)]" (bytes_to_string r.n_a) r.bob)
 
+val event_to_string: bytes -> option string
+let event_to_string b =
+  match? parse event_t b with
+  | Initiating {alice; bob; n_a} -> Some (Printf.sprintf "Initiating [alice = (%s), n_a = (%s), to = (%s)]" alice (bytes_to_string n_a) bob)
+  | Responding {alice; bob; n_a} -> Some (Printf.sprintf "Responding [bob = (%s), n_a = (%s), to = (%s)]" bob (bytes_to_string n_a) alice)
 
 
 
@@ -33,4 +38,4 @@ let get_trace_to_string_printers  =
   trace_to_string_printers_builder 
     message_to_string
     [(local_state_state.tag, state_to_string)]
-    []
+    [(event_event_t.tag, event_to_string)]
