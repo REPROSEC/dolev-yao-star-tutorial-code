@@ -157,8 +157,18 @@ type ev_init_t = {
 %splice [ps_ev_init_t] (gen_parser (`ev_init_t))
 
 [@@ with_bytes bytes]
+type ev_respond_t = {
+  alice:principal;
+  bob:principal;
+  n_a:bytes
+}
+%splice [ps_ev_respond_t] (gen_parser (`ev_respond_t))
+
+
+[@@ with_bytes bytes]
 type event_t =
   | Initiating: ev_init_t -> event_t
+  | Responding: ev_respond_t -> event_t
 
 %splice [ps_event_t] (gen_parser (`event_t))
 %splice [ps_event_t_is_well_formed] (gen_is_well_formed_lemma (`event_t))

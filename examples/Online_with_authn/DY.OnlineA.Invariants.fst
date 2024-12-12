@@ -76,7 +76,9 @@ let crypto_p : crypto_predicates = {
       | Some (Ack ack) ->
           let alice = prin in
           (get_label tr ack.n_a) `can_flow tr` public \/
-          exists bob. event_triggered tr alice (Initiating {alice; bob; n_a = ack.n_a})
+          exists bob. 
+           //event_triggered tr alice (Initiating {alice; bob; n_a = ack.n_a})
+          event_triggered tr bob (Responding {alice; bob; n_a = ack.n_a})
       | _ -> False // other messages can not be encrypted
       ))
       ); 
@@ -139,8 +141,9 @@ let state_predicate_p: local_state_predicate state_t = {
         let n_a = ack.n_a in
         is_knowable_by (principal_label bob) tr n_a
         /\ (
-          is_publishable tr n_a \/
-           event_triggered tr alice (Initiating {alice; bob; n_a})
+          // is_publishable tr n_a \/
+          //  event_triggered tr alice (Initiating {alice; bob; n_a})
+          event_triggered tr bob (Responding {alice; bob; n_a})
         )
     )
     | ReceivedAck rack  -> (
@@ -154,9 +157,9 @@ let state_predicate_p: local_state_predicate state_t = {
         let bob = rack.bob in
         let n_a = rack.n_a in
         is_secret (nonce_label alice bob) tr n_a
-        /\ (state_was_set_some_id tr bob (SentAck {alice; n_a})
-         // /\ event_triggered tr alice (Initiating {alice; bob; n_a})
-        //\/ (is_corrupt tr (principal_label alice) \/ is_corrupt tr (principal_label bob))
+        // /\ (state_was_set_some_id tr bob (SentAck {alice; n_a})
+         /\ ( event_triggered tr bob (Responding {alice; bob; n_a})
+        \/ (is_corrupt tr (principal_label alice) \/ is_corrupt tr (principal_label bob))
         )
     )
   );
@@ -201,6 +204,12 @@ let event_predicate_event_t: event_predicate event_t =
         prin == alice /\
         is_secret (nonce_label alice bob) tr n_a /\
         rand_just_generated tr n_a
+    )
+    | Responding {alice; bob; n_a} -> (
+        prin == bob
+        /\ (is_publishable tr n_a
+          \/ event_triggered tr alice (Initiating {alice; bob; n_a})
+        )
     )
 
 

@@ -112,6 +112,8 @@ let receive_ping_and_send_ack bob global_sids msg_ts =
 
   let n_a = png.n_a in
   let alice = png.alice in
+  
+  trigger_event bob (Responding {alice = alice; bob = bob; n_a = n_a});* 
 
   let ack = Ack {n_a} in
   // encrypt the reply for alice

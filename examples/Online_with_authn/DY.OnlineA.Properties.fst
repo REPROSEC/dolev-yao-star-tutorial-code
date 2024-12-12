@@ -26,7 +26,8 @@ val responder_authentication:
   )
   (ensures
      is_corrupt tr (principal_label alice) \/ is_corrupt tr (principal_label bob) \/
-     state_was_set_some_id tr bob (SentAck {alice; n_a})
+     //state_was_set_some_id tr bob (SentAck {alice; n_a})
+     event_triggered tr bob (Responding {alice; bob; n_a})
   )
 let responder_authentication tr alice bob n_a = ()
 
@@ -39,8 +40,8 @@ val n_a_secrecy:
   (requires
     attacker_knows tr n_a /\
     trace_invariant tr /\ (
-      (exists sess_id. state_was_set tr alice sess_id (SentPing {bob; n_a})) \/
-      (exists sess_id. state_was_set tr alice sess_id (ReceivedAck {bob; n_a} ))
+      (state_was_set_some_id tr alice (SentPing {bob; n_a})) \/
+      (state_was_set_some_id tr alice (ReceivedAck {bob; n_a} ))
     )
   )
   (ensures is_corrupt tr (principal_label alice) \/ is_corrupt tr (principal_label bob))

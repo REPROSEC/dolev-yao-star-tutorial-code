@@ -151,8 +151,12 @@ let receive_ping_and_send_ack_invariant bob bob_keys_sid msg_ts tr =
           let alice = png.alice in
           
           let ack = Ack {n_a} in
-          
-          match pke_enc_for bob alice bob_keys_sid.pki key_tag ack tr with
+
+          let (_, tr_ev) = trigger_event bob (Responding {alice; bob; n_a}) tr in
+          decode_ping_proof tr bob bob_keys_sid.private_keys msg;
+          assert(trace_invariant tr_ev);
+
+          match pke_enc_for bob alice bob_keys_sid.pki key_tag ack tr_ev with
           | (None, _) -> ()
           | (Some ack_encrypted, tr_ack) ->(
                 (* As before, encryption maintains the trace invariant 
@@ -177,7 +181,6 @@ let receive_ping_and_send_ack_invariant bob bob_keys_sid msg_ts tr =
                   decode_ping_proof tr bob bob_keys_sid.private_keys msg;
                   serialize_wf_lemma message_t (bytes_invariant tr) (ack);
                   assert(bytes_invariant tr (serialize message_t ack));
-                  
                   (* From this helper lemma, we also get
                      that the nonce is readable by alice and bob.
 
@@ -195,10 +198,10 @@ let receive_ping_and_send_ack_invariant bob bob_keys_sid msg_ts tr =
                      assert(pke_pred.pred tr (long_term_key_type_to_usage (LongTermPkeKey key_tag) alice) (serialize message_t ack));
                   *)
                   assert(is_publishable tr n_a \/ event_triggered tr alice (Initiating {alice; bob; n_a}));
-                  assert(pke_pred.pred tr (long_term_key_type_to_usage (LongTermPkeKey key_tag) alice) (serialize message_t ack));
+                  assert(pke_pred.pred tr_ev (long_term_key_type_to_usage (LongTermPkeKey key_tag) alice) (serialize message_t ack));
                 (* Thus, we can call `pke_enc_for_is_publishable`
                    to get the missing pre-condition for `send_msg_invariant`.*)
-                pke_enc_for_is_publishable tr bob alice bob_keys_sid.pki key_tag ack;
+                pke_enc_for_is_publishable tr_ev bob alice bob_keys_sid.pki key_tag ack;
                 assert(trace_invariant tr_msg);
 
                 (* As in the first protocol step,
@@ -310,7 +313,7 @@ let event_initiating_injective tr alice bob bob' n_a = ()
 
 /// The invariant lemma for the final protocol step `receive_ack_invariant`
 
-#push-options "--ifuel 2"
+#push-options "--ifuel 2 --z3rlimit 30"
 val receive_ack_invariant:
   alice:principal -> keys_sid:state_id -> msg_ts:timestamp ->
   tr:trace ->
@@ -348,8 +351,9 @@ let receive_ack_invariant alice keys_sid msg_ts tr =
               (* the more difficult case is the honest case,
                  when the nonce is not publishable
               *)
-              introduce ~(is_publishable tr n_a) ==> state_was_set_some_id tr bob (SentAck {alice; n_a})
-              //event_triggered tr alice (Initiating {alice; bob; n_a})
+              introduce ~(is_publishable tr n_a) ==> 
+                // state_was_set_some_id tr bob (SentAck {alice; n_a})
+                event_triggered tr bob (Responding {alice; bob; n_a})
               with _. (
                 decode_ack_proof tr alice keys_sid msg;
                 (* From the pke_pred for the decoded Ack,
@@ -360,6 +364,9 @@ let receive_ack_invariant alice keys_sid msg_ts tr =
                    We get this from the nonce injectivity from above.
                 *)
                 assert(pke_pred.pred tr (long_term_key_type_to_usage (LongTermPkeKey key_tag) alice) (serialize message_t (Ack ack)));
+                assert(~((get_label tr n_a) `can_flow tr` public));
+                assert(exists bob'. event_triggered tr bob (Responding {alice; bob = bob'; n_a}));
+                assert(exists bob'. event_triggered tr alice (Initiating {alice; bob = bob'; n_a}));
                 eliminate exists bob'. event_triggered tr alice (Initiating {alice; bob = bob'; n_a})
                 returns _
                 with _. (
