@@ -43,7 +43,7 @@ let crypto_predicates_nsl = {
   default_crypto_predicates with
 
   pke_pred = {
-    pred = (fun tr sk_usage msg ->
+    pred = (fun tr sk_usage pk msg ->
       (exists prin. 
       sk_usage == long_term_key_type_to_usage (LongTermPkeKey "NSL.PublicKey") prin
       /\ (
@@ -67,7 +67,7 @@ let crypto_predicates_nsl = {
         | None -> False
       ))
     );
-    pred_later = (fun tr1 tr2 pk msg ->
+    pred_later = (fun tr1 tr2 sk_usage pk msg ->
       parse_wf_lemma message (bytes_well_formed tr1) msg
       );
   };

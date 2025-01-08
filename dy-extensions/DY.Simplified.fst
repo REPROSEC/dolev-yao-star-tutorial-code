@@ -61,14 +61,17 @@ val pke_enc_for_is_publishable:
   Lemma
   (requires (
     let msg_b = serialize #bytes a msg in
-      trace_invariant tr
-    /\ has_pki_invariant
-    /\ bytes_invariant tr msg_b
-    /\ (get_label tr msg_b) `can_flow tr` (long_term_key_label bob)
-    /\ (get_label tr msg_b) `can_flow tr` (long_term_key_label alice)
-    /\ (pke_pred.pred tr (long_term_key_type_to_usage (LongTermPkeKey key_tag) bob) msg_b
-      \/ (get_label tr msg_b) `can_flow tr` public
-    )
+    let enc_key_usage = (long_term_key_type_to_usage (LongTermPkeKey key_tag) bob) in
+    let (pk_bob, _) = get_public_key alice alice_pki_sid (LongTermPkeKey key_tag) bob tr in
+    None? pk_bob \/ (
+        trace_invariant tr
+      /\ has_pki_invariant
+      /\ bytes_invariant tr msg_b
+      /\ (get_label tr msg_b) `can_flow tr` (long_term_key_label bob)
+      /\ (get_label tr msg_b) `can_flow tr` (long_term_key_label alice)
+      /\ (pke_pred.pred tr enc_key_usage (Some?.v pk_bob) msg_b
+        \/ (get_label tr msg_b) `can_flow tr` public)
+      )
     ))
   (ensures (
     match pke_enc_for alice bob alice_pki_sid key_tag msg tr with
@@ -86,9 +89,9 @@ let pke_enc_for_is_publishable tr #a alice bob alice_pki_sid key_tag msg =
       let msg = serialize #bytes a msg in
       assert(is_public_key_for tr_out pk_bob pk_type bob);
       let sk_usg = long_term_key_type_to_usage (LongTermPkeKey key_tag) bob in
-      introduce pke_pred.pred tr sk_usg msg ==> is_publishable tr_out cipher
+      introduce pke_pred.pred tr sk_usg pk_bob msg ==> is_publishable tr_out cipher
       with _ .
-        pke_pred.pred_later tr tr_nonce sk_usg msg;
+        pke_pred.pred_later tr tr_nonce sk_usg pk_bob msg;
       ()
 )  
 
@@ -123,9 +126,11 @@ val bytes_invariant_pke_dec_with_key_lookup:
         let plain_b = serialize #bytes a plaintext in
         is_knowable_by (long_term_key_label alice ) tr plain_b /\
       ( let sk_usg = (long_term_key_type_to_usage (LongTermPkeKey key_tag) alice) in
+        let (sk_alice, _) = get_private_key alice keys_sid (LongTermPkeKey key_tag) tr in
+        Some? sk_alice /\
         ((
           //PkKey? sk_usg /\
-          pke_pred.pred tr sk_usg plain_b )
+          pke_pred.pred tr sk_usg (pk (Some?.v sk_alice)) plain_b )
           \/ (
           (get_label tr plain_b `can_flow tr` public)
         )
