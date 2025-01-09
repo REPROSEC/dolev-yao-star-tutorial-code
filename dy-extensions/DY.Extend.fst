@@ -23,6 +23,22 @@ let rand_generated_before tr b =
 let state_was_set_some_id (#a:Type) {|local_state a|} tr prin (cont : a) =
   exists sid. DY.Lib.state_was_set tr prin sid cont
 
+
+val state_was_set_some_id_grows:
+  #a:Type -> {|lsa:local_state a|} ->
+  tr1:trace -> tr2:trace -> 
+  prin:principal -> content:a ->
+  Lemma
+  (requires tr1 <$ tr2
+    /\ state_was_set_some_id tr1 prin content
+  )
+  (ensures
+    state_was_set_some_id tr2 prin content
+  )
+  [SMTPat (state_was_set_some_id #a #lsa tr1 prin content); SMTPat (tr1 <$ tr2)]
+let state_was_set_some_id_grows #a #ls tr1 tr2 prin content  = ()
+
+
 val empty_invariants:
   {| protocol_invariants |} ->
   Lemma (trace_invariant empty_trace)
