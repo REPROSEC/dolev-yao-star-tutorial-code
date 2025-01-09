@@ -40,7 +40,7 @@ instance crypto_usages_p : crypto_usages = default_crypto_usages
 let crypto_p : crypto_predicates = { 
   default_crypto_predicates with 
   pke_pred = { 
-    pred = (fun tr sk_usage msg ->
+    pred = (fun tr sk_usage pk msg ->
     exists prin.
     (
       sk_usage == long_term_key_type_to_usage (LongTermPkeKey key_tag) prin /\
@@ -74,7 +74,7 @@ let crypto_p : crypto_predicates = {
       | _ -> False
       ))
       ); 
-    pred_later = (fun tr1 tr2 pk msg -> 
+    pred_later = (fun tr1 tr2 sk_usage pk msg -> 
       parse_wf_lemma message_t (bytes_well_formed tr1) msg
     ) 
   } 
