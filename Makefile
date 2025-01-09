@@ -1,5 +1,5 @@
 Z3 		?= $(shell which z3)
-FSTAR_HOME 	?= $(dir $(shell which fstar.exe))/..
+FSTAR_EXE 	?= $(shell which fstar.exe)
 TUTORIAL_HOME   ?= .
 DY_HOME 	?= $(TUTORIAL_HOME)/../dolev-yao-star-extrinsic
 COMPARSE_HOME 	?= $(DY_HOME)/../comparse
@@ -19,7 +19,7 @@ FSTAR_INCLUDE_DIRS = $(addprefix --include , $(INCLUDE_DIRS))
 ADMIT ?=
 MAYBE_ADMIT = $(if $(ADMIT),--admit_smt_queries true)
 
-FSTAR_EXE ?= $(FSTAR_HOME)/bin/fstar.exe
+#FSTAR_EXE ?= $(FSTAR_HOME)/bin/fstar.exe
 FSTAR = $(FSTAR_EXE) $(MAYBE_ADMIT)
 
 FSTAR_EXTRACT = --extract '-* +DY +Comparse'

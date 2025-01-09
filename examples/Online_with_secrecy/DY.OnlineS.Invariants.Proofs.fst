@@ -153,7 +153,8 @@ let send_ping_invariant alice bob keys_sid  tr =
              and use the key of bob for encryption (in pke_enc_for),
              we satisfy the predicate.
           *)
-          assert(pke_pred.pred tr_rand (long_term_key_type_to_usage (LongTermPkeKey key_tag) bob) (serialize message_t ping));
+          let (Some pk_bob, _) = get_public_key alice keys_sid (LongTermPkeKey key_tag) bob tr_rand in
+          assert(pke_pred.pred tr_rand (long_term_key_type_to_usage (LongTermPkeKey key_tag) bob) pk_bob (serialize message_t ping));
       (* Now we showed all pre-conditions of `pke_enc_for_is_publishable`
          and can call this lemma to show that ping_encrypted is publishable.
 
@@ -258,10 +259,12 @@ val decode_ping_proof:
     | (None, _) -> True
     | (Some png, _) -> (
         let n_a = png.n_a in
+        let (sk_bob, _) = get_private_key bob keys_sid (LongTermPkeKey key_tag) tr in
+        Some? sk_bob /\
         bytes_invariant tr n_a /\
         is_knowable_by (nonce_label png.alice bob) tr n_a /\
         ( is_publishable tr n_a
-        \/ (pke_pred.pred tr (long_term_key_type_to_usage (LongTermPkeKey key_tag) bob) (serialize message_t (Ping png)))
+        \/ (pke_pred.pred tr (long_term_key_type_to_usage (LongTermPkeKey key_tag) bob) (pk (Some?.v sk_bob)) (serialize message_t (Ping png)))
         )
     )
   ))
