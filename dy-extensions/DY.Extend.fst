@@ -20,52 +20,8 @@ let rand_generated_before tr b =
   is_not_empty tr /\
   exists ts. rand_generated_at tr ts b
 
-
-let core_state_was_set_grows  tr1 tr2 prin sid cont:
-  Lemma 
-  (requires
-    tr1 <$ tr2
-    /\ state_was_set tr1 prin sid cont
-  )
-  (ensures
-    state_was_set tr2 prin sid cont
-  )
-  [SMTPat (state_was_set tr1 prin sid cont); SMTPat (tr1 <$ tr2)]
-  = ()
-
-
-let state_was_set_grows (#a:Type) {|ls:local_state a|} tr1 tr2 prin sid (cont : a):
-  Lemma 
-  (requires
-    tr1 <$ tr2
-    /\ DY.Lib.state_was_set tr1 prin sid cont
-  )
-  (ensures
-    DY.Lib.state_was_set tr2 prin sid cont
-  )
-  [SMTPat (DY.Lib.state_was_set tr1 prin sid cont); SMTPat (tr1 <$ tr2)]
-  = 
-  reveal_opaque (`%DY.Lib.state_was_set) (DY.Lib.state_was_set #a);
-  reveal_opaque (`%tagged_state_was_set) (tagged_state_was_set)
-
-
 let state_was_set_some_id (#a:Type) {|local_state a|} tr prin (cont : a) =
   exists sid. DY.Lib.state_was_set tr prin sid cont
-
-val state_was_set_some_id_grows:
-  #a:Type -> {|lsa:local_state a|} ->
-  tr1:trace -> tr2:trace -> 
-  prin:principal -> content:a ->
-  Lemma
-  (requires tr1 <$ tr2
-    /\ state_was_set_some_id tr1 prin content
-  )
-  (ensures
-    state_was_set_some_id tr2 prin content
-  )
-  [SMTPat (state_was_set_some_id #a #lsa tr1 prin content); SMTPat (tr1 <$ tr2)]
-let state_was_set_some_id_grows #a #ls tr1 tr2 prin content  = 
-  assert(exists sid. DY.Lib.state_was_set tr1 prin sid content)
 
 val empty_invariants:
   {| protocol_invariants |} ->
