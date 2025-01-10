@@ -1,6 +1,7 @@
-DY_HOME ?= ../../../dolev-yao-star-extrinsic
+TUTORIAL_HOME ?= ../..
 
 EXAMPLES = Basics
-EXAMPLE_DIRS = ../../dy-extensions $(addprefix ../, $(EXAMPLES))
-include $(DY_HOME)/Makefile
+EXAMPLE_DIRS = $(addprefix $(TUTORIAL_HOME)/examples/, $(EXAMPLES))
+
+include $(TUTORIAL_HOME)/Makefile
 
