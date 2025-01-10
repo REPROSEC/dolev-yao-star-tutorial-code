@@ -81,10 +81,12 @@ val decode_ping_proof:
     | (None, _) -> True
     | (Some png, _) -> (
         let n_a = png.n_a in
+        let (sk_bob, _) = get_private_key bob keys_sid (LongTermPkeKey key_tag) tr in
+        Some? sk_bob /\
         bytes_invariant tr n_a /\
         is_knowable_by (nonce_label png.alice bob) tr n_a /\
         ( is_publishable tr n_a
-        \/ (pke_pred.pred tr (long_term_key_type_to_usage (LongTermPkeKey key_tag) bob) (serialize message_t (Ping png)))
+        \/ (pke_pred.pred tr (long_term_key_type_to_usage (LongTermPkeKey key_tag) bob) (pk (Some?.v sk_bob)) (serialize message_t (Ping png)))
         )
      )
    )
@@ -221,9 +223,11 @@ val decode_ack_proof:
     | (None, _) -> True
     | (Some ack, _) -> (
         let n_a = ack.n_a in
+        let (sk_alice, _) = get_private_key alice keys_sid (LongTermPkeKey key_tag) tr in
+        Some? sk_alice /\
         bytes_invariant tr n_a /\
         ( is_publishable tr n_a
-        \/ (pke_pred.pred tr (long_term_key_type_to_usage (LongTermPkeKey key_tag) alice) (serialize message_t (Ack ack)))
+        \/ (pke_pred.pred tr (long_term_key_type_to_usage (LongTermPkeKey key_tag) alice) (pk (Some?.v sk_alice)) (serialize message_t (Ack ack)))
         )
     )
   ))
@@ -315,7 +319,8 @@ let receive_ack_invariant alice keys_sid msg_ts tr =
               introduce ~(is_publishable tr n_a) ==> event_triggered tr bob (Responding {alice; bob; n_a})
               with _. (
                 decode_ack_proof tr alice keys_sid msg;
-                assert(pke_pred.pred tr (long_term_key_type_to_usage (LongTermPkeKey key_tag) alice) (serialize message_t (Ack ack)));
+                let (sk_alice, _) = get_private_key alice keys_sid (LongTermPkeKey key_tag) tr in
+                assert(pke_pred.pred tr (long_term_key_type_to_usage (LongTermPkeKey key_tag) alice) (pk (Some?.v sk_alice)) (serialize message_t (Ack ack)));
                 assert(exists bob'. event_triggered tr bob (Responding {alice; bob = bob'; n_a}));
                 (* From the pke_pred for the decoded Ack,
                    we get that there is some bob' that 
