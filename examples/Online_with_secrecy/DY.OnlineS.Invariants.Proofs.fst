@@ -153,7 +153,8 @@ let send_ping_invariant alice bob keys_sid  tr =
              and use the key of bob for encryption (in pke_enc_for),
              we satisfy the predicate.
           *)
-          assert(pke_pred.pred tr_rand (long_term_key_type_to_usage (LongTermPkeKey key_tag) bob) (serialize message_t ping));
+          let (Some pk_bob, _) = get_public_key alice keys_sid (LongTermPkeKey key_tag) bob tr_rand in
+          assert(pke_pred.pred tr_rand (long_term_key_type_to_usage (LongTermPkeKey key_tag) bob) pk_bob (serialize message_t ping));
       (* Now we showed all pre-conditions of `pke_enc_for_is_publishable`
          and can call this lemma to show that ping_encrypted is publishable.
 
@@ -225,6 +226,17 @@ let send_ping_invariant_short_version alice bob keys_sid  tr =
 
 (*** Replying to a Ping maintains the invariants ***)
 
+val decode_ping_invariant:
+  bob:principal -> keys_sid:state_id ->
+  msg:bytes ->
+  tr:trace ->
+  Lemma
+  (requires trace_invariant tr)
+  (ensures (
+    let (_, tr_out) = decode_ping bob keys_sid msg tr in
+    trace_invariant tr_out
+  ))
+let decode_ping_invariant bob keys_sid msg tr = ()
 
 (* For the second protocol step (`receive_ping_and_send_ack`),
    we need a helper lemma: `decode_ping_proof`.
@@ -247,10 +259,12 @@ val decode_ping_proof:
     | (None, _) -> True
     | (Some png, _) -> (
         let n_a = png.n_a in
+        let (sk_bob, _) = get_private_key bob keys_sid (LongTermPkeKey key_tag) tr in
+        Some? sk_bob /\
         bytes_invariant tr n_a /\
         is_knowable_by (nonce_label png.alice bob) tr n_a /\
         ( is_publishable tr n_a
-        \/ (pke_pred.pred tr (long_term_key_type_to_usage (LongTermPkeKey key_tag) bob) (serialize message_t (Ping png)))
+        \/ (pke_pred.pred tr (long_term_key_type_to_usage (LongTermPkeKey key_tag) bob) (pk (Some?.v sk_bob)) (serialize message_t (Ping png)))
         )
     )
   ))
@@ -381,6 +395,20 @@ let receive_ping_and_send_ack_invariant bob bob_keys_sid msg_ts tr =
 
 
 (*** Receiving an Ack maintains the invariants ***)
+
+val decode_ack_invariant:
+  alice:principal -> keys_sid:state_id -> cipher:bytes ->
+  tr:trace ->
+  Lemma
+  (requires
+    trace_invariant tr
+  )
+  (ensures (
+    let (_, tr_out) = decode_ack alice keys_sid cipher tr in
+    trace_invariant tr_out
+  ))
+let decode_ack_invariant alice keys_sid msg tr = ()
+
 
 /// The invariant lemma for the final protocol step `receive_ack_invariant`
 

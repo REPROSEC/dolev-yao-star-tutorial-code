@@ -48,7 +48,7 @@ let crypto_p : crypto_predicates = {
      that are available at the receiver after decryption?
   *)
   pke_pred = { 
-    pred = (fun tr sk_usage msg ->
+    pred = (fun tr sk_usage pk msg ->
     exists prin. // the intended receiver of the message
     (
       // needed for `decode_ping_proof` [Why?]
@@ -80,7 +80,7 @@ let crypto_p : crypto_predicates = {
        if the predicate specified above holds for some trace tr1
        it also holds for any extension tr2 of tr1
     *)
-    pred_later = (fun tr1 tr2 pk msg -> 
+    pred_later = (fun tr1 tr2 sk_usage pk msg ->
       parse_wf_lemma message_t (bytes_well_formed tr1) msg
     ) 
   } 
