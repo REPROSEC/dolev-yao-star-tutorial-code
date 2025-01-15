@@ -66,7 +66,7 @@ let run () : traceful (option unit ) =
   // Alice sends a Ping to Bob
   let*? (alice_sid, ping_ts) = send_ping alice bob alice_global_session_ids.pki in
   // Bob replies with an Ack (reading the ping at the given timestamp)
-  let*? (bob_sid, ack_ts) = receive_ping_and_send_ack bob bob_global_session_ids ping_ts in
+  let*? (bob_sid, ack_ts) = receive_ping_and_send_ack bob bob_global_session_ids.private_keys bob_global_session_ids.pki ping_ts in
   // Alice receives the Ack (at the given ack timestamp)
   let*? _ = receive_ack alice alice_global_session_ids.private_keys ack_ts in
 
