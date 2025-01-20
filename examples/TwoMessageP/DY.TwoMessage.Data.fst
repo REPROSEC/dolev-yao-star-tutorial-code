@@ -110,6 +110,6 @@ instance parseable_serializeable_bytes_state_t: parseable_serializeable bytes st
 /// so that they are distinguishable from any internal DY* states. 
 
 instance local_state_state: local_state state_t = {
-  tag = "P.State";
+  tag = "TwoMessage.State";
   format = parseable_serializeable_bytes_state_t;
 }
