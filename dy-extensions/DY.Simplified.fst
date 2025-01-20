@@ -147,3 +147,28 @@ let bytes_invariant_pke_dec_with_key_lookup tr #a alice keys_sid key_tag cipher 
       bytes_invariant_pke_dec tr sk_alice sk_usg cipher;
       serialize_parse_inv_lemma a cipher_dec
   )
+
+
+
+// generate a private LongTermPkeKey with a given tag
+// (this hides the LongTermPkeKey constructor from the user)
+val generate_private_pke_key: principal -> state_id -> string -> traceful (option unit)
+let generate_private_pke_key prin private_keys_sid key_tag =
+  generate_private_key prin private_keys_sid (LongTermPkeKey key_tag)
+
+
+// Store Bob's public Pke key in Alice's state
+// Bob's public key is computed from his private key
+// 1. Retrieve Bob's private key from his private key session (using the tag)
+// 2. Compute the public key from the private key
+// 3. Install Bob's public key in Alice's public key store (under the same tag)
+val install_public_pke_key:
+  (alice:principal) -> (alice_public_keys_sid:state_id) ->
+  (key_tag:string) ->
+  (bob:principal) -> (bob_private_keys_sid:state_id) ->
+  traceful (option unit)
+let install_public_pke_key alice alice_public_keys_sid key_tag bob bob_private_keys_sid =
+  let*? priv_key_bob = get_private_key bob bob_private_keys_sid (LongTermPkeKey key_tag) in
+  let pub_key_bob = pk priv_key_bob in
+  install_public_key alice alice_public_keys_sid (LongTermPkeKey key_tag) bob pub_key_bob
+
