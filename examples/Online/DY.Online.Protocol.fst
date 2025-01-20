@@ -47,9 +47,9 @@ let send_ping alice bob alice_public_keys_sid =
      using a public key of Bob with the protocol tag
      stored in Alice's public key storage.
 
-    (may fail, Alice doesn't have a public key
+     (may fail, Alice doesn't have a public key
      for Bob with the right tag stored in her key session)
-   *)
+    *)
   // returns the cipher text in wire format (i.e., includes serializing)
   let*? ping_encrypted = pke_enc_for alice bob alice_public_keys_sid key_tag ping in
   let* msg_ts = send_msg ping_encrypted in
@@ -77,7 +77,7 @@ let send_ping alice bob alice_public_keys_sid =
 /// * encryption fails (for example, if Bob doesn't have a public key for Alice)
 
 val receive_ping_and_send_ack: principal -> state_id -> state_id -> timestamp -> traceful (option (state_id & timestamp))
-let receive_ping_and_send_ack bob private_keys_sid public_keys_sid msg_ts =
+let receive_ping_and_send_ack bob bob_private_keys_sid bob_public_keys_sid msg_ts =
   let*? msg = recv_msg msg_ts in
 
   (* Instead of just parsing the message msg
@@ -87,13 +87,13 @@ let receive_ping_and_send_ack bob private_keys_sid public_keys_sid msg_ts =
      (fails, if no such key exists)
   *)
   // returns the abstract message (i.e., includes parsing)
-  let*? png_ = pke_dec_with_key_lookup #message_t bob private_keys_sid key_tag msg in
+  let*? png_ = pke_dec_with_key_lookup #message_t bob bob_private_keys_sid key_tag msg in
 
   guard_tr (Ping? png_);*?
 
   let Ping png = png_ in
-  let n_a = png.n_a in
   let alice = png.alice in
+  let n_a = png.n_a in
 
   let ack = Ack {n_a} in
 
@@ -102,11 +102,12 @@ let receive_ping_and_send_ack bob private_keys_sid public_keys_sid msg_ts =
      using a public key of Alice with the protocol tag
      stored in Bob's public key storage.
   *)
-  let*? ack_encrypted = pke_enc_for bob alice public_keys_sid key_tag ack in
+  let*? ack_encrypted = pke_enc_for bob alice bob_public_keys_sid key_tag ack in
 
   let* ack_ts = send_msg ack_encrypted in
-  
-  let* sess_id = start_new_session bob (SentAck {alice; n_a}) in
+
+  let ack_state = SentAck {alice; n_a} in
+  let* sess_id = start_new_session bob ack_state in
   
   return (Some (sess_id, ack_ts))
 
@@ -126,7 +127,7 @@ let receive_ping_and_send_ack bob private_keys_sid public_keys_sid msg_ts =
 /// * there is no prior session related to n_a
 
 val receive_ack: principal -> state_id -> timestamp -> traceful (option state_id)
-let receive_ack alice private_keys_sid ack_ts =
+let receive_ack alice alice_private_keys_sid ack_ts =
   let*? msg = recv_msg ack_ts in
 
   (* Instead of just parsing the message msg
@@ -136,7 +137,7 @@ let receive_ack alice private_keys_sid ack_ts =
      (fails, if no such key exists)
   *)
   // returns the abstract message (i.e., includes parsing)
-  let*? ack = pke_dec_with_key_lookup #message_t alice private_keys_sid key_tag msg in
+  let*? ack = pke_dec_with_key_lookup #message_t alice alice_private_keys_sid key_tag msg in
 
   guard_tr (Ack? ack);*?
 
@@ -144,8 +145,10 @@ let receive_ack alice private_keys_sid ack_ts =
   let n_a = ack.n_a in
 
   let*? (st, sid) = lookup_state #state_t alice
-    (fun st -> SentPing? st && (SentPing?.ping st).n_a = n_a)
-    in
+    (fun st -> 
+          SentPing? st
+      && (SentPing?.ping st).n_a = n_a
+    ) in
   guard_tr(SentPing? st);*?
   let bob = (SentPing?.ping st).bob in
 
