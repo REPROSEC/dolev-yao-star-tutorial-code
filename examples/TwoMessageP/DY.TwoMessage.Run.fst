@@ -30,7 +30,7 @@ let run () : traceful (option unit ) =
 
   // Alice receives the Ack
   // (we pass the timestamp of Bob's response to the receive function of Alice)
-  let*? _ = receive_ack alice ack_ts in
+  receive_ack alice ack_ts;*?
 
 
   (*** Printing the Trace ***)

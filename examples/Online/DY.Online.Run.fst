@@ -51,15 +51,15 @@ let run () : traceful (option unit ) =
   // Bob replies with an Ack (reading the ping at the given timestamp)
   let*? (bob_sid, ack_ts) = receive_ping_and_send_ack bob bob_private_keys_sid bob_public_keys_sid ping_ts in
   // Alice receives the Ack (at the given ack timestamp)
-  let*? _ = receive_ack alice alice_private_keys_sid ack_ts in
+  let*? _ = get_private_key alice bob_private_keys_sid (LongTermPkeKey key_tag) in
+  receive_ack alice alice_private_keys_sid ack_ts;*?
 
 
  (*** Printing the Trace ***)
 
   let* tr = get_trace in
   let _ = IO.debug_print_string (
-       // trace_to_string get_trace_to_string_printers tr
-      trace_to_string default_trace_to_string_printers tr
+       trace_to_string get_trace_to_string_printers tr
     ) in
 
   return (Some ())
