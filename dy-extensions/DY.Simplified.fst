@@ -172,3 +172,64 @@ let install_public_pke_key alice alice_public_keys_sid key_tag bob bob_private_k
   let pub_key_bob = pk priv_key_bob in
   install_public_key alice alice_public_keys_sid (LongTermPkeKey key_tag) bob pub_key_bob
 
+
+
+(*** Printing PkeKeys ***)
+
+(* For the first example protocol using public key encryption (the Online? protocol),
+   I want a simple to understand printing of the trace.
+
+   The following functions simplify printing of Pke Keys:
+   * The LongTermPkeKey constructor is hidden
+   * For public keys, the lookup key for the dictionary is written as pair 
+     (of key tag and principal)
+*)
+
+val long_term_key_type_to_string_: DY.Lib.State.PrivateKeys.long_term_key_type -> string
+let long_term_key_type_to_string_ t =
+  match t with
+  | DY.Lib.State.PrivateKeys.LongTermPkeKey u -> u
+  | DY.Lib.State.PrivateKeys.LongTermSigKey u -> "LongTermSigKey " ^ u
+
+val private_keys_types_to_string_: (list (map_elem DY.Lib.State.PrivateKeys.private_key_key DY.Lib.State.PrivateKeys.private_key_value)) -> string
+let rec private_keys_types_to_string_ m =
+  match m with
+  | [] -> ""
+  | hd :: tl -> (
+    (private_keys_types_to_string_ tl) ^ 
+    Printf.sprintf "%s = (%s)," (long_term_key_type_to_string_ hd.key.ty) (bytes_to_string hd.value.private_key)
+  )
+
+val private_keys_state_to_string: bytes -> option string
+let private_keys_state_to_string content_bytes =
+  let? state = parse (map DY.Lib.State.PrivateKeys.private_key_key DY.Lib.State.PrivateKeys.private_key_value) content_bytes in
+  Some (Printf.sprintf "[%s]" (private_keys_types_to_string_ state.key_values))
+
+
+
+val pki_types_to_string: (list (map_elem DY.Lib.State.PKI.pki_key DY.Lib.State.PKI.pki_value)) -> string
+let rec pki_types_to_string m =
+  match m with
+  | [] -> ""
+  | hd :: tl -> (
+    (pki_types_to_string tl) ^ 
+    Printf.sprintf "(%s, %s) = (%s)," (long_term_key_type_to_string_ hd.key.ty) hd.key.who (bytes_to_string hd.value.public_key)
+  )
+  
+val pki_state_to_string: bytes -> option string
+let pki_state_to_string content_bytes =
+  let? state = parse (map DY.Lib.State.PKI.pki_key DY.Lib.State.PKI.pki_value) content_bytes in
+  Some (Printf.sprintf "[%s]" (pki_types_to_string state.key_values))
+
+let default_pke_keys_printer =
+ [ (DY.Lib.State.PrivateKeys.map_types_private_keys.tag, private_keys_state_to_string)
+ ; (DY.Lib.State.PKI.map_types_pki.tag, pki_state_to_string)
+ ]
+
+let default_state_to_string = default_pke_keys_printer
+
+let default_trace_to_string_printers =
+  trace_to_string_printers_builder 
+    default_message_to_string
+    default_state_to_string
+    default_event_to_string

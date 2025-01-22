@@ -2,6 +2,7 @@ module DY.TwoMessage.Run
 
 open DY.Core
 open DY.Lib
+open DY.Simplified
 
 open DY.TwoMessage.Run.Printing
 open DY.TwoMessage.Protocol

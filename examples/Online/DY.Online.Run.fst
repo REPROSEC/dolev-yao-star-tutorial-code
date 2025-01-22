@@ -58,7 +58,8 @@ let run () : traceful (option unit ) =
 
   let* tr = get_trace in
   let _ = IO.debug_print_string (
-      trace_to_string get_trace_to_string_printers tr
+       // trace_to_string get_trace_to_string_printers tr
+      trace_to_string default_trace_to_string_printers tr
     ) in
 
   return (Some ())
