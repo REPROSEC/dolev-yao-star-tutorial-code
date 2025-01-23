@@ -4,7 +4,7 @@ open Comparse
 open DY.Core
 open DY.Lib
 
-/// Here we define the abstract types for the simple 2 message protocol:
+/// Here we define the abstract types for the simple Two-Message protocol:
 /// 
 /// A -> B: Ping (A, n_A)
 /// B -> A: Ack n_A

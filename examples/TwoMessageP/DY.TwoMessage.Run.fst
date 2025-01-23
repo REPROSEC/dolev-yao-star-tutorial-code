@@ -7,7 +7,7 @@ open DY.Simplified
 open DY.TwoMessage.Run.Printing
 open DY.TwoMessage.Protocol
 
-/// Here, we print the trace after a successful run of the Two Message protocol.
+/// Here, we print the trace after a successful run of the Two-Message protocol.
 
 let run () : traceful (option unit ) =
   let _ = IO.debug_print_string "************* Trace *************\n" in

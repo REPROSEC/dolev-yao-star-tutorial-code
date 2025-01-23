@@ -10,7 +10,7 @@ open DY.Extend
 open DY.TwoMessage.Data
 
 /// Here we define the DY* model of the
-/// simple 2 message protocol:
+/// simple Two-Message protocol:
 ///
 /// A -> B: Ping (A, n_A)
 /// B -> A: Ack n_A

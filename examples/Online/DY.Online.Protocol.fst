@@ -10,7 +10,7 @@ open DY.Extend
 open DY.Online.Data
 
 /// Here we define the DY* mode of the "Online?" protocol,
-/// an extension of the simple Two Message protocol:
+/// an extension of the simple Two-Message protocol:
 /// the two messages are now (asymmetrically) encrypted
 ///
 /// A -> B: enc{Ping (A, n_A)}_B
@@ -18,10 +18,12 @@ open DY.Online.Data
 ///
 /// The model consists of 3 functions,
 /// one for each protocol step
-/// (just as for the simple two message protocol):
+/// (just as for the simple Two-Message protocol):
 /// 1. Alice sends the Ping to Bob (`send_ping`)
 /// 2. Bob receives the Ping and replies with the Ack (`receive_ping_and_send_ack`)
 /// 3. Alice receives the Ack (`receive_ack`)
+///
+/// We highlight the differences to the model of the Two-Message protocol.
 
 (*** Sending the Ping ***)
 
@@ -43,6 +45,7 @@ let send_ping alice bob alice_public_keys_sid =
   let ping = Ping {alice; n_a} in 
 
   (* Instead of just serializing the message,
+     (as in the Two-Message Protocol model),
      we need to encrypt the Ping for Bob,
      using a public key of Bob with the protocol tag
      stored in Alice's public key storage.
@@ -81,9 +84,9 @@ let receive_ping_and_send_ack bob bob_private_keys_sid bob_public_keys_sid msg_t
   let*? msg = recv_msg msg_ts in
 
   (* Instead of just parsing the message msg
-     (as in the Two Message Protocol model),
+     (as in the Two-Message Protocol model),
      we now have to decrypt the received message
-     with a private key of bob having the protocol tag.
+     with a private key of Bob having the protocol tag.
      (fails, if no such key exists)
   *)
   // returns the abstract message (i.e., includes parsing)
@@ -98,6 +101,7 @@ let receive_ping_and_send_ack bob bob_private_keys_sid bob_public_keys_sid msg_t
   let ack = Ack {n_a} in
 
   (* Instead of just serializing the message,
+     (as in the Two-Message Protocol model),
      we need to encrypt it for Alice,
      using a public key of Alice with the protocol tag
      stored in Bob's public key storage.
@@ -131,7 +135,7 @@ let receive_ack alice alice_private_keys_sid ack_ts =
   let*? msg = recv_msg ack_ts in
 
   (* Instead of just parsing the message msg
-     (as in the Two Message Protocol model),
+     (as in the Two-Message Protocol model),
      we now have to decrypt the received message
      with a private key of Alice having the protocol tag.
      (fails, if no such key exists)
