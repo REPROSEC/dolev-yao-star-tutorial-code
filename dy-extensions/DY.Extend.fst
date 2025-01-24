@@ -40,108 +40,22 @@ let empty_invariants #pinvs =
 /// * st3 does NOT satisfy property p
 /// The returned state will then be s2.
 
-val lookup_state_aux: principal -> (bytes -> bool) -> trace -> option (bytes & state_id)
-let rec lookup_state_aux prin p tr =
-  match tr with
-  | Nil -> None
-  | Snoc rest (SetState prin' sid' cont') ->
-      if prin' = prin && p cont'
-      then Some (cont', sid')
-      else lookup_state_aux prin p rest
-  | Snoc rest _ -> lookup_state_aux prin p rest
 
 val core_lookup_state: principal -> (bytes -> bool) -> traceful (option (bytes & state_id))
 let core_lookup_state prin p =
   let* tr = get_trace in
-  return (lookup_state_aux prin p tr)
-
-/// If `lookup` returns some state,
-/// this state satisfies the property used in the lookup.
-
-val lookup_state_aux_state_was_set_and_prop:
-  prin:principal -> p:(bytes -> bool) -> tr:trace ->
-  Lemma
-  (ensures (
-    let opt_content = lookup_state_aux prin p tr in
-      match opt_content with
-      | None -> True
-      | Some (content, sid) ->
-               p content
-             /\ state_was_set tr prin sid content
-  ))
-let rec lookup_state_aux_state_was_set_and_prop prin p tr =
-  match tr with
-  | Nil -> ()
-  | Snoc tr_init _ ->
-         lookup_state_aux_state_was_set_and_prop prin p tr_init
-
-/// If `lookup` returns a state on a trace with `trace_invariant`,
-/// the returned state additionally satisfies the state predicate.
-
-val lookup_state_aux_state_invariant:
-  {|protocol_invariants|} ->
-  prin:principal -> p:(bytes -> bool) -> tr:trace ->
-  Lemma
-  (requires
-    trace_invariant tr
-  )
-  (ensures (
-    let opt_content = lookup_state_aux prin p tr in
-      match opt_content with
-      | None -> True
-      | Some (content, sid) ->
-               state_pred.pred tr prin sid content
-             /\ p content
-             /\ state_was_set tr prin sid content
-  ))
-let lookup_state_aux_state_invariant #invs prin p tr =
-  lookup_state_aux_state_was_set_and_prop prin p tr;
-  match lookup_state_aux prin p tr with
-  | None -> ()
-  | Some (content, sid) ->
-    DY.Core.state_was_set_implies_pred tr prin sid content
-
-/// lifting both properties from `_aux` to the `traceful` versions.
-
-val core_lookup_state_state_was_set_and_prop:
-  prin:principal -> p:(bytes -> bool) -> tr:trace ->
-  Lemma
-  (ensures (
-    let (opt_content, tr_out) = core_lookup_state prin p tr in
-    tr == tr_out /\
-    (match opt_content with
-     | None -> True
-     | Some (content, sid) ->
-              p content
-            /\ state_was_set tr prin sid content
-    )
-  ))
-  [SMTPat (core_lookup_state prin p tr)]
-let core_lookup_state_state_was_set_and_prop prin p tr =
-  lookup_state_aux_state_was_set_and_prop prin p tr
-
-
-val lookup_state_state_invariant:
-  {|invs:protocol_invariants|} ->
-  prin:principal -> p:(bytes -> bool) -> tr:trace ->
-  Lemma
-  (requires
-    trace_invariant tr
-  )
-  (ensures (
-    let (opt_content, tr_out) = core_lookup_state prin p tr in
-    tr == tr_out /\
-    (match opt_content with
-     | None -> True
-     | Some (content, sid) ->
-              state_pred.pred tr prin sid content
-            /\ p content
-            /\ state_was_set tr prin sid content
-    )
-  ))
-  [SMTPat (core_lookup_state prin p tr); SMTPat (trace_invariant #invs tr)]
-let lookup_state_state_invariant #invs prin p tr =
-  lookup_state_aux_state_invariant prin p tr
+  match trace_search_last tr
+    (fun en ->
+      match en with
+      | SetState prin' sid' cont' ->
+          prin' = prin &&
+          p cont'
+      | _ -> false
+    ) with
+  | None -> return None
+  | Some ts ->
+      let SetState prin sid cont = get_entry_at tr ts in
+      return (Some (cont, sid))
 
 /// Lookup the most recent tagged state for a principal that satisfys some property.
 /// The property given as argument is on the _content_ of the state.
