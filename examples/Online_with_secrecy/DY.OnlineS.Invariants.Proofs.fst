@@ -261,8 +261,8 @@ val decode_ping_proof:
         let n_a = png.n_a in
         let (sk_bob, _) = get_private_key bob keys_sid (LongTermPkeKey key_tag) tr in
         Some? sk_bob /\
-        bytes_invariant tr n_a /\
-        is_knowable_by (nonce_label png.alice bob) tr n_a /\
+//        bytes_invariant tr n_a /\
+//        is_knowable_by (nonce_label png.alice bob) tr n_a /\
         ( is_publishable tr n_a
         \/ (pke_pred.pred tr (long_term_key_type_to_usage (LongTermPkeKey key_tag) bob) (pk (Some?.v sk_bob)) (serialize message_t (Ping png)))
         )

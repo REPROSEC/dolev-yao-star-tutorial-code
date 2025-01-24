@@ -10,7 +10,7 @@ open DY.Extend
 open DY.OnlineS.Data
 
 /// Here we define the DY* mode of the "Online?" protocol,
-/// an extension of the simple Two Message protocol:
+/// an extension of the simple Two-Message protocol:
 /// the two messages are now (asymmetrically) encrypted
 ///
 /// A -> B: enc{Ping (A, n_A)}_B
@@ -18,7 +18,7 @@ open DY.OnlineS.Data
 ///
 /// The model consists of 3 functions,
 /// one for each protocol step
-/// (just as for the simple two message protocol):
+/// (just as for the simple Two-Message protocol):
 /// 1. Alice sends the Ping to Bob (`send_ping`)
 /// 2. Bob receives the Ping and replies with the Ack (`receive_ping_and_send_ack`)
 /// 3. Alice receives the Ack (`receive_ack`)
@@ -72,7 +72,7 @@ let send_ping alice bob keys_sid =
 /// The step fails, if one of
 /// * decryption fails
 /// * the message is not of the right type, i.e., not a first message
-/// * encryption fails
+/// * encryption fails (for example, if Bob doesn't have a public key for Alice)
 
 /// Decrypting the message (Step 2 from above) is pulled out to a separate function
 /// The function
@@ -160,8 +160,10 @@ let receive_ack alice keys_sid ack_ts =
   let n_a = ack.n_a in
 
   let*? (st, sid) = lookup_state #state_t alice
-    (fun st -> SentPing? st && (SentPing?.ping st).n_a = n_a)
-    in
+    (fun st -> 
+          SentPing? st
+      && (SentPing?.ping st).n_a = n_a
+    ) in
   guard_tr(SentPing? st);*?
   let bob = (SentPing?.ping st).bob in
 
