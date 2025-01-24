@@ -27,13 +27,13 @@ open DY.OnlineS.Invariants
 /// The invariant lemma for the first step `send_ping`
 
 val send_ping_invariant:
-  alice:principal -> bob:principal -> keys_sid:state_id ->
+  alice:principal -> bob:principal -> alice_private_keys_sid:state_id ->
   tr:trace ->
   Lemma
   ( requires trace_invariant tr
   )
   (ensures (
-    let (_ , tr_out) = send_ping alice bob keys_sid tr in
+    let (_ , tr_out) = send_ping alice bob alice_private_keys_sid tr in
     trace_invariant tr_out
   ))
 (* The proof works by showing that the trace invariant is maintained
@@ -43,7 +43,7 @@ val send_ping_invariant:
    (Note that we are now in the "Lemma context",
    so we have to unfold the monadic lets and sequences.)
 *)
-let send_ping_invariant alice bob keys_sid  tr =
+let send_ping_invariant alice bob alice_private_keys_sid  tr =
   (* The first action is generating the nonce n_a.
   
      Note that we can't use let* here since we are not in the traceful monad.
@@ -70,7 +70,7 @@ let send_ping_invariant alice bob keys_sid  tr =
      * We need to make a case distinction on the resulting option
        and show trace_invariant in each case separately
   *)
-  match pke_enc_for alice bob keys_sid key_tag ping tr_rand with
+  match pke_enc_for alice bob alice_private_keys_sid key_tag ping tr_rand with
   | (None, _) -> ( 
       (* If encryption fails, the trace is not changed,
          and hence the resulting trace after send_ping is tr_rand.
@@ -153,7 +153,7 @@ let send_ping_invariant alice bob keys_sid  tr =
              and use the key of bob for encryption (in pke_enc_for),
              we satisfy the predicate.
           *)
-          let (Some pk_bob, _) = get_public_key alice keys_sid (LongTermPkeKey key_tag) bob tr_rand in
+          let (Some pk_bob, _) = get_public_key alice alice_private_keys_sid (LongTermPkeKey key_tag) bob tr_rand in
           assert(pke_pred.pred tr_rand (long_term_key_type_to_usage (LongTermPkeKey key_tag) bob) pk_bob (serialize message_t ping));
       (* Now we showed all pre-conditions of `pke_enc_for_is_publishable`
          and can call this lemma to show that ping_encrypted is publishable.
@@ -161,7 +161,7 @@ let send_ping_invariant alice bob keys_sid  tr =
          Together with the `send_msg_invariant` lemma, 
          we then obtain that `tr_msg` satisfies the trace invariant.
       *)
-      pke_enc_for_is_publishable tr_rand alice bob keys_sid key_tag ping;
+      pke_enc_for_is_publishable tr_rand alice bob alice_private_keys_sid key_tag ping;
       assert(trace_invariant tr_msg);
 
       (* The last traceful action in this step is starting a new session *)
@@ -208,35 +208,35 @@ let send_ping_invariant alice bob keys_sid  tr =
    we end up with the following very short proof.
 *)
 val send_ping_invariant_short_version:
-  alice:principal -> bob:principal -> keys_sid:state_id ->
+  alice:principal -> bob:principal -> alice_private_keys_sid:state_id ->
   tr:trace ->
   Lemma
   ( requires trace_invariant tr
   )
   (ensures (
-    let (_ , tr_out) = send_ping alice bob keys_sid tr in
+    let (_ , tr_out) = send_ping alice bob alice_private_keys_sid tr in
     trace_invariant tr_out
   ))
-let send_ping_invariant_short_version alice bob keys_sid  tr =
+let send_ping_invariant_short_version alice bob alice_private_keys_sid  tr =
   let (n_a, tr_rand) = gen_rand_labeled (nonce_label alice bob) tr in
   let ping = Ping {alice; n_a} in 
   serialize_wf_lemma message_t (is_knowable_by (nonce_label alice bob) tr_rand) ping;
-  pke_enc_for_is_publishable tr_rand alice bob keys_sid key_tag ping
+  pke_enc_for_is_publishable tr_rand alice bob alice_private_keys_sid key_tag ping
 
 
 (*** Replying to a Ping maintains the invariants ***)
 
 val decode_ping_invariant:
-  bob:principal -> keys_sid:state_id ->
+  bob:principal -> bob_private_keys_sid:state_id ->
   msg:bytes ->
   tr:trace ->
   Lemma
   (requires trace_invariant tr)
   (ensures (
-    let (_, tr_out) = decode_ping bob keys_sid msg tr in
+    let (_, tr_out) = decode_ping bob bob_private_keys_sid msg tr in
     trace_invariant tr_out
   ))
-let decode_ping_invariant bob keys_sid msg tr = ()
+let decode_ping_invariant bob bob_private_keys_sid msg tr = ()
 
 (* For the second protocol step (`receive_ping_and_send_ack`),
    we need a helper lemma: `decode_ping_proof`.
@@ -247,7 +247,7 @@ let decode_ping_invariant bob keys_sid msg tr = ()
 
 val decode_ping_proof:
   tr:trace ->
-  bob:principal -> keys_sid:state_id ->
+  bob:principal -> bob_private_keys_sid:state_id ->
   msg:bytes ->
   Lemma
   (requires (
@@ -255,11 +255,11 @@ val decode_ping_proof:
     /\ bytes_invariant tr msg
   ))
   (ensures (
-    match decode_ping bob keys_sid msg tr with
+    match decode_ping bob bob_private_keys_sid msg tr with
     | (None, _) -> True
     | (Some png, _) -> (
         let n_a = png.n_a in
-        let (sk_bob, _) = get_private_key bob keys_sid (LongTermPkeKey key_tag) tr in
+        let (sk_bob, _) = get_private_key bob bob_private_keys_sid (LongTermPkeKey key_tag) tr in
         Some? sk_bob /\
         bytes_invariant tr n_a /\
         is_knowable_by (nonce_label png.alice bob) tr n_a /\
@@ -268,11 +268,11 @@ val decode_ping_proof:
         )
     )
   ))
-let decode_ping_proof tr bob keys_sid msg =
-    match decode_ping bob keys_sid msg tr with
+let decode_ping_proof tr bob bob_private_keys_sid msg =
+    match decode_ping bob bob_private_keys_sid msg tr with
     | (None, _) -> ()
     | (Some png, _) -> (
-        bytes_invariant_pke_dec_with_key_lookup tr #message_t #parseable_serializeable_bytes_message_t bob keys_sid key_tag msg;
+        bytes_invariant_pke_dec_with_key_lookup tr #message_t #parseable_serializeable_bytes_message_t bob bob_private_keys_sid key_tag msg;
         let plain = serialize message_t (Ping png) in
         parse_wf_lemma message_t (bytes_invariant tr) plain;
         FStar.Classical.move_requires (parse_wf_lemma message_t (is_publishable tr)) plain
@@ -283,16 +283,16 @@ let decode_ping_proof tr bob keys_sid msg =
 /// The invariant lemma for the `receive_ping_and_send_ack` step
 
 val receive_ping_and_send_ack_invariant:
-  bob:principal -> keys_sid:global_sess_ids -> ts:timestamp ->
+  bob:principal -> bob_private_keys_sid:state_id -> bob_public_keys_sid:state_id -> ts:timestamp ->
   tr:trace ->
   Lemma
   ( requires trace_invariant tr
   )
   (ensures (
-    let (_ , tr_out) = receive_ping_and_send_ack bob keys_sid ts tr in
+    let (_ , tr_out) = receive_ping_and_send_ack bob bob_private_keys_sid bob_public_keys_sid ts tr in
     trace_invariant tr_out
   ))
-let receive_ping_and_send_ack_invariant bob bob_keys_sid msg_ts tr =
+let receive_ping_and_send_ack_invariant bob bob_private_keys_sid bob_public_keys_sid msg_ts tr =
   (* As for the first protocol step,
      we need to show that every traceful action 
      maintains the trace invariant.
@@ -303,7 +303,7 @@ let receive_ping_and_send_ack_invariant bob bob_keys_sid msg_ts tr =
       (* From the lemma `recv_msg_same_trace` in `DY.Core.Trace.Manipulation` 
          we have that the receive function does not change the trace
          and hence the trace invariant is still satisfied. *)
-      match decode_ping bob bob_keys_sid.private_keys msg tr with // unfold the next monadic let
+      match decode_ping bob bob_private_keys_sid msg tr with // unfold the next monadic let
       | (None, _) -> () // Again, if decoding fails, the trace is not changed and hence nothing left to show
       | (Some png, _) -> (
           (* Decoding the ping message does not change the trace.
@@ -327,7 +327,7 @@ let receive_ping_and_send_ack_invariant bob bob_keys_sid msg_ts tr =
           
           let ack = Ack {n_a} in
           
-          match pke_enc_for bob alice bob_keys_sid.pki key_tag ack tr with
+          match pke_enc_for bob alice bob_public_keys_sid key_tag ack tr with
           | (None, _) -> ()
           | (Some ack_encrypted, tr_ack) ->(
                 (* As before, encryption maintains the trace invariant 
@@ -349,7 +349,7 @@ let receive_ping_and_send_ack_invariant bob bob_keys_sid msg_ts tr =
 
                      TODO ....
                   *)
-                  decode_ping_proof tr bob bob_keys_sid.private_keys msg;
+                  decode_ping_proof tr bob bob_private_keys_sid msg;
                   serialize_wf_lemma message_t (bytes_invariant tr) (ack);
                   assert(bytes_invariant tr (serialize message_t ack));
                   
@@ -371,7 +371,7 @@ let receive_ping_and_send_ack_invariant bob bob_keys_sid msg_ts tr =
                   *)
                 (* Thus, we can call `pke_enc_for_is_publishable`
                    to get the missing pre-condition for `send_msg_invariant`.*)
-                pke_enc_for_is_publishable tr bob alice bob_keys_sid.pki key_tag ack;
+                pke_enc_for_is_publishable tr bob alice bob_public_keys_sid key_tag ack;
                 assert(trace_invariant tr_msg);
 
                 (* As in the first protocol step,
@@ -397,14 +397,14 @@ let receive_ping_and_send_ack_invariant bob bob_keys_sid msg_ts tr =
 (*** Receiving an Ack maintains the invariants ***)
 
 val decode_ack_invariant:
-  alice:principal -> keys_sid:state_id -> cipher:bytes ->
+  alice:principal -> alice_private_keys_sid:state_id -> cipher:bytes ->
   tr:trace ->
   Lemma
   (requires
     trace_invariant tr
   )
   (ensures (
-    let (_, tr_out) = decode_ack alice keys_sid cipher tr in
+    let (_, tr_out) = decode_ack alice alice_private_keys_sid cipher tr in
     trace_invariant tr_out
   ))
 let decode_ack_invariant alice keys_sid msg tr = ()
@@ -414,16 +414,16 @@ let decode_ack_invariant alice keys_sid msg tr = ()
 
 #push-options "--ifuel 2"
 val receive_ack_invariant:
-  alice:principal -> keys_sid:state_id -> msg_ts:timestamp ->
+  alice:principal -> alice_private_keys_sid:state_id -> msg_ts:timestamp ->
   tr:trace ->
   Lemma
   (requires
     trace_invariant tr
   )
   (ensures (
-    let (_, tr_out) = receive_ack alice keys_sid msg_ts tr in
+    let (_, tr_out) = receive_ack alice alice_private_keys_sid msg_ts tr in
     trace_invariant tr_out
   ))
 (* The proof for this last step is automatic. *)
-let receive_ack_invariant alice keys_sid msg_ts tr = ()
+let receive_ack_invariant alice alice_private_keys_sid msg_ts tr = ()
 #pop-options
