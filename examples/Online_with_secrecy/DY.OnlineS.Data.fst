@@ -111,7 +111,7 @@ instance parseable_serializeable_bytes_state_t: parseable_serializeable bytes st
 /// so that they are distinguishable from any internal DY* states. 
 
 instance local_state_state: local_state state_t = {
-  tag = "Online.State";
+  tag = "P.State";
   format = parseable_serializeable_bytes_state_t;
 }
 
@@ -136,4 +136,4 @@ type global_sess_ids = {
 /// so that they can not be confused with other keys.
 /// (TODO: rephrase this)
 
-let key_tag = "Online.Key"
+let key_tag = "P.Key"

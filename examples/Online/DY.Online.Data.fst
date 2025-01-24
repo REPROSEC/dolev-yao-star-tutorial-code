@@ -119,8 +119,21 @@ instance local_state_state: local_state state_t = {
 
 (*** PKI ***)
 
+/// For en-/de-cryption we assume some PKI.
+/// I.e., every participant has some private decryption keys
+/// and some public encryption keys from other participants.
+/// All private keys of a participant will be stored in one session
+/// and all public keys that the participant knows will be stored in another session.
+/// For each participant, we collect both these session IDs in a global record.
+
+type global_sess_ids = {
+  pki: state_id;
+  private_keys: state_id;
+}
+
 /// Similarly as for states,
 /// we tag the keys that are used on the protocol level,
 /// so that they can not be confused with other keys.
+/// (TODO: rephrase this)
 
 let key_tag = "Online.Key"
