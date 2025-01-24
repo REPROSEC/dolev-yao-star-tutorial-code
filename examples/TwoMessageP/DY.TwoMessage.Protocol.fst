@@ -118,7 +118,7 @@ let receive_ack alice ack_ts =
   // * she startet a run
   // * with the nonce n_a (the one received from Bob)
   // (the step fails, if no such session exists)
-  let*? (st, sid) = lookup_state #state_t alice
+  let*? (sid, st) = lookup_state #state_t alice
     (fun st -> 
           SentPing? st // st is a state of type SentPing 
       && (SentPing?.ping st).n_a = n_a // the nonce stored in st is n_a

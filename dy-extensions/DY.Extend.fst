@@ -41,38 +41,47 @@ let empty_invariants #pinvs =
 /// The returned state will then be s2.
 
 
-val core_lookup_state: principal -> (bytes -> bool) -> traceful (option (bytes & state_id))
+val trace_search_last_state_for: principal -> (state_id -> bytes -> bool) -> trace -> option (state_id & bytes)
+let trace_search_last_state_for prin p tr =
+  let is_state_for_satisfying prin p e =
+    match e with
+    | SetState prin' sid cont -> prin' = prin 
+        && p sid cont
+    | _ -> false in
+  let? state_ts = trace_search_last tr (is_state_for_satisfying prin p) in
+  let SetState _ sid content = get_entry_at tr state_ts in
+  Some (sid, content)
+
+val get_state_aux_: principal -> state_id -> tr:trace -> option bytes
+let get_state_aux_ prin sid tr =
+  let? (_, cont) = trace_search_last_state_for prin (fun sid' _ -> sid' = sid) tr in
+  Some cont
+
+val lookup_state_: principal -> (bytes -> bool) -> trace -> (option (state_id & bytes))
+let lookup_state_ prin p tr =
+  trace_search_last_state_for prin (fun _ cont -> p cont) tr
+
+val core_lookup_state: principal -> (bytes -> bool) -> traceful (option (state_id & bytes))
 let core_lookup_state prin p =
   let* tr = get_trace in
-  match trace_search_last tr
-    (fun en ->
-      match en with
-      | SetState prin' sid' cont' ->
-          prin' = prin &&
-          p cont'
-      | _ -> false
-    ) with
-  | None -> return None
-  | Some ts ->
-      let SetState prin sid cont = get_entry_at tr ts in
-      return (Some (cont, sid))
+  return (lookup_state_ prin p tr)
 
 /// Lookup the most recent tagged state for a principal that satisfys some property.
 /// The property given as argument is on the _content_ of the state.
 
 val lookup_tagged_state:
- string -> principal -> (bytes -> bool) -> traceful (option (bytes & state_id))
+ string -> principal -> (bytes -> bool) -> traceful (option (state_id & bytes))
 let lookup_tagged_state the_tag prin p =
   let p_ b =
     match parse tagged_state b with
     | None -> false
     | Some ({tag; content;}) -> tag = the_tag && p content in
-  let*? (full_content_bytes, sid) = core_lookup_state prin p_ in
+  let*? (sid, full_content_bytes) = core_lookup_state prin p_ in
   match parse tagged_state full_content_bytes with
     | None -> return None
     | Some ({tag; content;}) ->
         if (tag = the_tag)
-        then return (Some (content, sid))
+        then return (Some (sid, content))
         else return None
 
 val lookup_tagged_state_pred:
@@ -84,7 +93,7 @@ val lookup_tagged_state_pred:
     tr == tr_out /\
     (match opt_content with
      | None -> True
-     | Some (content,sid) ->
+     | Some (sid, content) ->
            p content
          /\ tagged_state_was_set tr tag prin sid content
     )
@@ -101,7 +110,7 @@ let lookup_tagged_state_pred the_tag prin p tr =
     match parse tagged_state b with
     | None -> false
     | Some ({tag; content;}) -> tag = the_tag && p content in
-  let (Some (full_cont_bytes, sid), _) = core_lookup_state prin p_ tr in
+  let (Some (sid, full_cont_bytes), _) = core_lookup_state prin p_ tr in
   serialize_parse_inv_lemma #bytes tagged_state full_cont_bytes
   )
 
@@ -119,7 +128,7 @@ val lookup_tagged_state_invariant:
     tr == tr_out /\
     (match opt_content with
      | None -> True
-     | Some (content,sid) ->
+     | Some (sid, content) ->
            spred.pred tr prin sid content
          /\ p content
          /\ tagged_state_was_set tr tag prin sid content
@@ -133,17 +142,17 @@ let lookup_tagged_state_invariant #invs the_tag spred prin p tr =
   let (opt_content, tr_out) = lookup_tagged_state the_tag prin p tr in
   match opt_content with
   | None -> ()
-  | Some (content,sid) -> (
+  | Some (sid, content) -> (
       let p_ b =
         match parse tagged_state b with
         | None -> false
         | Some ({tag; content;}) -> tag = the_tag && p content in
 
-      let (Some (l_cont, l_sid), _) = core_lookup_state prin p_ tr in
+      let (Some (l_sid, l_cont), _) = core_lookup_state prin p_ tr in
       serialize_parse_inv_lemma #bytes tagged_state l_cont;
       reveal_opaque (`%tagged_state_was_set) (tagged_state_was_set);
 
-      let (Some (full_content_bytes, sid), tr) = core_lookup_state prin p_ tr in
+      let (Some (sid, full_content_bytes), tr) = core_lookup_state prin p_ tr in
       local_eq_global_lemma split_local_bytes_state_predicate_params state_pred.pred the_tag spred (tr, prin, sid, full_content_bytes) the_tag (tr, prin, sid, content)
      )
 
@@ -152,16 +161,16 @@ let lookup_tagged_state_invariant #invs the_tag spred prin p tr =
 
 val lookup_state:
   #a:Type -> {|local_state a|} ->
-  principal -> (a -> bool) -> traceful (option (a & state_id))
+  principal -> (a -> bool) -> traceful (option (state_id & a))
 let lookup_state #a #ls prin p =
   let p_ b =
     match parse a b with
     | None -> false
     | Some x -> p x in
-  let*? (content_bytes, sid) = lookup_tagged_state ls.tag prin p_ in
+  let*? (sid, content_bytes) = lookup_tagged_state ls.tag prin p_ in
   match parse a content_bytes with
   | None -> return None
-  | Some content -> return (Some (content,sid))
+  | Some content -> return (Some (sid, content))
 
 val lookup_state_pred:
   #a:Type -> {|ls:local_state a|} ->
@@ -172,7 +181,7 @@ val lookup_state_pred:
     tr == tr_out /\
     (match opt_content with
      | None -> True
-     | Some (content, sid) ->
+     | Some (sid, content) ->
           p content
           /\ DY.Lib.state_was_set tr prin sid content
     )
@@ -183,12 +192,12 @@ let lookup_state_pred #a #ls prin p tr =
   let (opt_content, tr_out) = lookup_state prin p tr in
   match opt_content with
   | None -> ()
-  | Some (content, sid) -> (
+  | Some _ -> (
       let p_ b =
         match parse a b with
         | None -> false
         | Some x -> p x in
-      let (Some (l_cont, l_sid), _) = lookup_tagged_state ls.tag prin p_ tr in
+      let (Some (l_sid, l_cont), _) = lookup_tagged_state ls.tag prin p_ tr in
      serialize_parse_inv_lemma #bytes a l_cont;
      reveal_opaque (`%DY.Lib.state_was_set) (DY.Lib.state_was_set #a)
   )
@@ -210,7 +219,7 @@ val lookup_state_invariant:
     tr == tr_out /\
     (match opt_content with
      | None -> True
-     | Some (content, sid) ->
+     | Some (sid, content) ->
          spred.pred tr prin sid content
          /\ p content
          /\ DY.Lib.state_was_set tr prin sid content
@@ -223,12 +232,12 @@ let lookup_state_invariant #a #ls #invs spred prin p tr =
   let (opt_content, tr_out) = lookup_state prin p tr in
   match opt_content with
   | None -> ()
-  | Some (content, sid) -> (
+  | Some _ -> (
       let p_ b =
         match parse a b with
         | None -> false
         | Some x -> p x in
-      let (Some (l_cont, l_sid), _) = lookup_tagged_state ls.tag prin p_ tr in
+      let (Some (l_sid, l_cont), _) = lookup_tagged_state ls.tag prin p_ tr in
       serialize_parse_inv_lemma #bytes a l_cont;
       reveal_opaque (`%DY.Lib.state_was_set) (DY.Lib.state_was_set #a)
   )

@@ -148,7 +148,7 @@ let receive_ack alice alice_private_keys_sid ack_ts =
   let Ack ack = ack in
   let n_a = ack.n_a in
 
-  let*? (st, sid) = lookup_state #state_t alice
+  let*? (sid, st) = lookup_state #state_t alice
     (fun st -> 
           SentPing? st
       && (SentPing?.ping st).n_a = n_a
