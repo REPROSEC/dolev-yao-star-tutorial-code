@@ -331,7 +331,7 @@ let prepare_msg3__proof tr global_sess_id alice msg_id =
     (InitiatorSendingMsg1?.b s = msg2.bob))  in
         match lookup_state alice p tr with
         | (None , _) -> ()
-        | (Some (st, sid) , _ ) ->
+        | (Some (sid, st) , _ ) ->
                 decode_message2_proof tr alice msg2.bob msg sk_a msg2.n_a
     )
   )
@@ -387,7 +387,7 @@ let send_msg3__proof tr global_sess_id alice msg_id =
     (InitiatorSendingMsg1?.b s = msg2.bob))  in
         match lookup_state alice p tr with
         | (None , _) -> ()
-        | (Some (st, sid) , _ ) -> (
+        | (Some (sid, st) , _ ) -> (
                 decode_message2_proof tr alice msg2.bob msg sk_a msg2.n_a;
         let n_b = msg2.n_b in
         let InitiatorSendingMsg1 bob n_a = st in
@@ -444,7 +444,7 @@ let receive_msg3_proof tr global_sess_id bob sess_id msg_id =
     (ResponderSendingMsg2?.n_b s = msg3.n_b)) in
            match lookup_state bob p tr with
            | (None, _ ) -> ()
-           | (Some (st, id), _) ->  (
+           | (Some (id, st), _) ->  (
            let ResponderSendingMsg2 alice n_a n_b = st in
             assert(event_triggered tr bob (Responding alice bob n_a n_b));
              

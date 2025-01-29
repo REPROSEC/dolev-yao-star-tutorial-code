@@ -165,7 +165,7 @@ let prepare_msg3_ global_sess_id alice msg_id =
   let (opt_st, _) = lookup_state #nsl_session alice p tr in
   match opt_st with
   | None -> return None
-  | Some (st, sid ) -> (
+  | Some (sid, st) -> (
       let InitiatorSendingMsg1 bob n_a = st in
       set_state alice sid (InitiatorSendingMsg3 bob n_a msg2.n_b <: nsl_session);*
       return (Some sid)
@@ -197,7 +197,7 @@ let send_msg3_ global_sess_id alice msg_id =
   let (opt_st, _) = lookup_state #nsl_session alice p tr in
   match opt_st with
   | None -> return None
-  | Some (st, sid ) -> (
+  | Some (sid, st) -> (
       let n_b = msg2.n_b in
       let InitiatorSendingMsg1 bob n_a = st in
       let st = InitiatorSendingMsg3 bob n_a n_b in
@@ -234,7 +234,7 @@ let receive_msg3 global_sess_id bob msg_id =
   let (opt_st, _) = lookup_state #nsl_session bob p tr in
   match opt_st with
   | None -> return None
-  | Some (st, sid ) -> (
+  | Some (sid, st) -> (
          let ResponderSendingMsg2 alice n_a n_b = st in
          set_state bob sid (ResponderReceivedMsg3 alice n_a n_b <: nsl_session);*
   return (Some ())
