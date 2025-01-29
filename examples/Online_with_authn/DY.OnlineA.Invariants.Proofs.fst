@@ -301,7 +301,7 @@ let receive_ack_invariant alice keys_sid msg_ts tr =
           let p = (fun (st:state_t) -> SentPing? st && (SentPing?.ping st).n_a = n_a) in
           match lookup_state #state_t alice p tr with
           | (None, _) -> ()
-          | (Some (st, sid), _) -> (
+          | (Some (sid, st), _) -> (
               let bob = (SentPing?.ping st).bob in
               let newst = ReceivedAck {bob; n_a} in
 
