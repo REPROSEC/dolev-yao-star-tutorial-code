@@ -4,6 +4,8 @@ open DY.Core
 open DY.Lib
 open Comparse
 
+open DY.Simplified
+
 open DY.Online.Data
 
 /// Helper functions for trace printing.
@@ -26,11 +28,9 @@ let state_to_string b =
   | ReceivedAck r -> Some (Printf.sprintf "ReceivedAck [n_a = (%s), from = (%s)]" (bytes_to_string r.n_a) r.bob)
 
 
-
-
 val get_trace_to_string_printers: trace_to_string_printers
 let get_trace_to_string_printers  = 
   trace_to_string_printers_builder 
     message_to_string
-    [(local_state_state.tag, state_to_string)]
+    ((local_state_state.tag, state_to_string) :: default_state_to_string)
     []

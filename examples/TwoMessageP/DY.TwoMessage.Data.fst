@@ -4,7 +4,7 @@ open Comparse
 open DY.Core
 open DY.Lib
 
-/// Here we define the abstract types for the simple 2 message protocol:
+/// Here we define the abstract types for the simple Two-Message protocol:
 /// 
 /// A -> B: Ping (A, n_A)
 /// B -> A: Ack n_A
@@ -110,6 +110,6 @@ instance parseable_serializeable_bytes_state_t: parseable_serializeable bytes st
 /// so that they are distinguishable from any internal DY* states. 
 
 instance local_state_state: local_state state_t = {
-  tag = "P.State";
+  tag = "TwoMessage.State";
   format = parseable_serializeable_bytes_state_t;
 }
