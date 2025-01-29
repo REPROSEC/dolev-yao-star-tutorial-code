@@ -1,2 +1,4 @@
-EXAMPLE_DIRS = .
-include $(DY_HOME)/Makefile
+TUTORIAL_HOME ?= ..
+
+EXAMPLE_DIRS = $(TUTORIAL_HOME/)dy-extensions
+include $(TUTORIAL_HOME)/Makefile
