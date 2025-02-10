@@ -20,6 +20,28 @@ let rand_generated_before tr b =
   is_not_empty tr /\
   exists ts. rand_generated_at tr ts b
 
+val prefix_inv:
+  {|protocol_invariants|} ->
+  tr:trace ->
+  p:trace ->
+  Lemma 
+    (requires
+      trace_invariant tr /\
+      p <$ tr
+    )
+    (ensures
+      trace_invariant p
+    )
+    [SMTPat (trace_invariant tr)
+    ; SMTPat (p <$ tr)]
+let rec prefix_inv tr p = 
+  reveal_opaque (`%trace_invariant) trace_invariant
+  ; reveal_opaque (`%grows) (grows #label)
+  ; reveal_opaque (`%prefix) (prefix #label)
+  ;if trace_length tr = trace_length p
+    then ()
+    else prefix_inv (init tr) p
+
 let state_was_set_some_id (#a:Type) {|local_state a|} tr prin (cont : a) =
   exists sid. DY.Lib.state_was_set tr prin sid cont
 
@@ -96,7 +118,7 @@ let rec entry_at_invariant tr ts en =
    entry_at_invariant (init tr) ts en
   )
 
-val state_was_set_at_for_some_id_invariant:
+val state_was_set_at_invariant:
  #a:Type -> {|local_state a|} ->
   {|protocol_invariants|} -> 
  spred:local_state_predicate a ->
@@ -115,7 +137,7 @@ val state_was_set_at_for_some_id_invariant:
   ; SMTPat (has_local_state_predicate spred)
   ; SMTPat (state_was_set_at tr ts prin sid cont)
   ]
-let state_was_set_at_for_some_id_invariant #a #ls #invs spred tr ts prin sid cont =
+let state_was_set_at_invariant #a #ls #invs spred tr ts prin sid cont =
   let cont_core = (serialize tagged_state {tag =ls.tag; content = serialize a cont}) in
   let en = (SetState prin sid cont_core) in
   assert(entry_at tr ts en)
