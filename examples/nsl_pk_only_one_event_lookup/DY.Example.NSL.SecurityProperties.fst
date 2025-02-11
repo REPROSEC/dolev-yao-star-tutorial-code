@@ -26,19 +26,18 @@ open DY.Example.NSL.Protocol.Stateful.Proof
 
 val initiator_authentication:
   tr:trace -> ts:timestamp ->
-  alice:principal -> 
-  bob:principal -> sid:state_id ->
+  alice:principal -> bob:principal ->
   n_a:bytes -> n_b:bytes ->
   Lemma
   (requires
-    state_was_set_at tr ts bob sid (ResponderReceivedMsg3 alice n_a n_b) /\
+    state_was_set_at_some_id tr ts bob (ResponderReceivedMsg3 alice n_a n_b) /\
     trace_invariant tr
   )
   (ensures
     is_corrupt tr (principal_label alice) \/ is_corrupt tr (principal_label bob) \/
   state_was_set_some_id (prefix tr ts) alice (InitiatorSendingMsg1 bob n_a)
   )
-let initiator_authentication tr ts alice bob sid n_a n_b = ()
+let initiator_authentication tr ts alice bob n_a n_b = ()
   
 /// If Alice thinks she talks with Bob,
 /// then Bob thinks he talk to Alice (with the same nonces),
@@ -46,18 +45,18 @@ let initiator_authentication tr ts alice bob sid n_a n_b = ()
 
 val responder_authentication:
   tr:trace -> ts:timestamp ->
-  alice:principal -> sid:state_id ->
-  bob:principal -> n_a:bytes -> n_b:bytes ->
+  alice:principal -> bob:principal -> 
+  n_a:bytes -> n_b:bytes ->
   Lemma
   (requires
-    state_was_set_at tr ts alice sid (InitiatorSendingMsg3 bob n_a n_b) /\
+    state_was_set_at_some_id tr ts alice (InitiatorSendingMsg3 bob n_a n_b) /\
     trace_invariant tr
   )
   (ensures
     is_corrupt tr (principal_label alice) \/ is_corrupt tr (principal_label bob) \/
     state_was_set_some_id (prefix tr ts) bob (ResponderSendingMsg2 alice n_a n_b)
   )
-let responder_authentication tr i alice sid bob n_a n_b = ()
+let responder_authentication tr i alice bob n_a n_b = ()
 
 /// The nonce n_a is unknown to the attacker,
 /// unless the attacker corrupted Alice or Bob.

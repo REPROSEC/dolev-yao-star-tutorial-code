@@ -95,6 +95,17 @@ val state_was_set_at:
 let state_was_set_at #a #ls tr ts prin sid cont =
   state_was_set_at_tagged tr ts ls.tag prin sid (serialize a cont)
 
+val state_was_set_at_some_id:
+  #a:Type -> {|local_state a|} ->
+  (tr:trace) -> (ts: timestamp) -> 
+  (prin: principal) ->
+  (cont:a) ->
+  prop
+let state_was_set_at_some_id #a #ls tr ts prin cont =
+  exists sid. state_was_set_at tr ts prin sid cont
+
+
+
 val entry_at_invariant:
   {|protocol_invariants|} ->
   tr:trace -> ts:timestamp -> 
