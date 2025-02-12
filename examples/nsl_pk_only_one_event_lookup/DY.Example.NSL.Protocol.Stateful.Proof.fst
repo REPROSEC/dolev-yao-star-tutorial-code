@@ -102,6 +102,8 @@ instance protocol_invariants_nsl: protocol_invariants = {
   trace_invs = trace_invariants_nsl;
 }
 
+let complies_with_nsl tr = trace_invariant #protocol_invariants_nsl tr
+
 /// Lemmas that the global state predicate contains all the local ones
 
 // Below, the `has_..._predicate` are called with the implicit argument `#protocol_invariants_nsl`.

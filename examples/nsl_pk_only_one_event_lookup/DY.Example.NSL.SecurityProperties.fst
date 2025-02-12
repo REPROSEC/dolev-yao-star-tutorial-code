@@ -27,12 +27,12 @@ val initiator_authentication:
   alice:principal -> bob:principal -> n_a:bytes -> n_b:bytes ->
   Lemma
   (requires
-    state_was_set_some_id tr bob (ResponderReceivedMsg3 alice n_a n_b) /\
-    trace_invariant tr
+    complies_with_nsl tr /\
+    state_was_set_some_id tr bob (ResponderReceivedMsg3 alice n_a n_b)
   )
   (ensures
     principal_is_corrupt tr alice \/ principal_is_corrupt tr bob \/
-  state_was_set_some_id tr alice (InitiatorSendingMsg1 bob n_a)
+    state_was_set_some_id tr alice (InitiatorSendingMsg1 bob n_a)
   )
 let initiator_authentication tr i alice bob n_a n_b = ()
 
@@ -45,8 +45,8 @@ val responder_authentication:
   alice:principal -> bob:principal -> n_a:bytes -> n_b:bytes ->
   Lemma
   (requires
-    state_was_set_some_id tr alice (InitiatorSendingMsg3 bob n_a n_b) /\
-    trace_invariant tr
+    complies_with_nsl tr /\
+    state_was_set_some_id tr alice (InitiatorSendingMsg3 bob n_a n_b)
   )
   (ensures
     principal_is_corrupt tr alice \/ principal_is_corrupt tr bob \/
@@ -61,8 +61,8 @@ val n_a_secrecy:
   tr:trace -> alice:principal -> bob:principal -> n_a:bytes ->
   Lemma
   (requires
-    attacker_knows tr n_a /\
-    trace_invariant tr /\ (
+    complies_with_nsl tr /\ 
+    attacker_knows tr n_a /\ (
       (state_was_set_some_id tr alice (InitiatorSendingMsg1 bob n_a)) \/
       (exists n_b. state_was_set_some_id tr alice (InitiatorSendingMsg3 bob n_a n_b)) \/
       (exists n_b. state_was_set_some_id tr bob (ResponderReceivedMsg3 alice n_a n_b))
@@ -79,8 +79,8 @@ val n_b_secrecy:
   tr:trace -> alice:principal -> bob:principal -> n_b:bytes ->
   Lemma
   (requires
-    attacker_knows tr n_b /\
-    trace_invariant tr /\ (
+    complies_with_nsl tr /\
+    attacker_knows tr n_b /\ (
       (exists n_a. state_was_set_some_id tr bob (ResponderSendingMsg2 alice n_a n_b)) \/
       (exists n_a. state_was_set_some_id tr bob (ResponderReceivedMsg3 alice n_a n_b)) \/
       (exists n_a. state_was_set_some_id tr alice (InitiatorSendingMsg3 bob n_a n_b))
