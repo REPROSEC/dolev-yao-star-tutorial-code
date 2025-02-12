@@ -121,15 +121,60 @@ val entry_at_invariant:
     ; SMTPat (entry_at tr ts en)
     ]
 let rec entry_at_invariant tr ts en = 
- reveal_opaque (`%trace_invariant) trace_invariant;
- if ts = last_timestamp tr 
-  then (reveal_opaque (`%prefix) (prefix #label))
-  else ( 
-   assert(init tr <$ tr);
-   entry_at_invariant (init tr) ts en
-  )
+  reveal_opaque (`%trace_invariant) trace_invariant;
+  if ts = last_timestamp tr 
+   then (reveal_opaque (`%prefix) (prefix #label))
+   else ( 
+    assert(init tr <$ tr);
+    entry_at_invariant (init tr) ts en
+   )
 
-val state_was_set_at_invariant:
+val state_was_set_at_core_implies_pred_on_prefix:
+ {|protocol_invariants|} -> 
+ tr:trace -> ts:timestamp ->
+ prin:principal -> sid:state_id -> cont:bytes ->
+ Lemma 
+  (requires 
+    trace_invariant tr 
+    /\ state_was_set_at_core tr ts prin sid cont
+  )
+  (ensures
+    state_pred.pred (prefix tr ts) prin sid cont
+  )
+  [SMTPat (trace_invariant tr)
+  ; SMTPat (state_was_set_at_core tr ts prin sid cont)
+  ]
+let state_was_set_at_core_implies_pred_on_prefix #invs tr ts prin sid cont =
+   let en = (SetState prin sid cont) in
+   assert(trace_entry_invariant (prefix tr ts) en)
+
+val state_was_set_at_tagged_implies_pred_on_prefix:
+ {|protocol_invariants|} -> 
+ tag:string -> spred:local_bytes_state_predicate tag ->
+ tr:trace -> ts:timestamp ->
+ prin:principal -> sid:state_id -> cont:bytes ->
+ Lemma 
+  (requires 
+    trace_invariant tr 
+    /\ has_local_bytes_state_predicate (|tag, spred|)
+    /\ state_was_set_at_tagged tr ts tag prin sid cont
+  )
+  (ensures
+    spred.pred (prefix tr ts) prin sid cont
+  )
+  [ SMTPat (trace_invariant tr)
+  ; SMTPat (has_local_bytes_state_predicate (|tag, spred|))
+  ; SMTPat (state_was_set_at_tagged tr ts tag prin sid cont)
+  ]
+let state_was_set_at_tagged_implies_pred_on_prefix #invs tag spred tr ts prin sid cont =
+  let full_content_bytes = (serialize tagged_state {tag; content = cont}) in
+  assert(state_pred.pred (prefix tr ts) prin sid full_content_bytes); 
+  parse_serialize_inv_lemma #bytes tagged_state {tag; content=cont};
+  reveal_opaque (`%has_local_bytes_state_predicate) (has_local_bytes_state_predicate);
+  local_eq_global_lemma split_local_bytes_state_predicate_params state_pred.pred tag spred ((prefix tr ts), prin, sid, full_content_bytes) tag ((prefix tr ts), prin, sid, cont)
+
+
+val state_was_set_at_implies_pred_on_prefix:
  #a:Type -> {|local_state a|} ->
   {|protocol_invariants|} -> 
  spred:local_state_predicate a ->
@@ -144,17 +189,12 @@ val state_was_set_at_invariant:
   (ensures
     spred.pred (prefix tr ts) prin sid cont
   )
-  [SMTPat (trace_invariant tr)
+  [ SMTPat (trace_invariant tr)
   ; SMTPat (has_local_state_predicate spred)
   ; SMTPat (state_was_set_at tr ts prin sid cont)
   ]
-let state_was_set_at_invariant #a #ls #invs spred tr ts prin sid cont =
-  let cont_core = (serialize tagged_state {tag =ls.tag; content = serialize a cont}) in
-  let en = (SetState prin sid cont_core) in
-  assert(entry_at tr ts en)
-  ; assert(trace_entry_invariant (prefix tr ts) en)
-  ; assert(invs.trace_invs.state_pred.pred (prefix tr ts) prin sid cont_core)
-  ; admit()
+let state_was_set_at_implies_pred_on_prefix #a #ls #invs spred tr ts prin sid cont =
+  parse_serialize_inv_lemma #bytes a cont
   
 
 /// Lookup the most recent state of a principal satisfying some property.
