@@ -30,8 +30,7 @@ val n_a_secrecy:
   tr:trace -> alice:principal -> bob:principal -> n_a:bytes ->
   Lemma
   (requires
- //   attacker_knows tr n_a /\
-    trace_invariant tr /\ (
+      complies_with_online_protocol tr /\ (
       (state_was_set_some_id tr alice (SentPing {bob; n_a})) \/
       (state_was_set_some_id tr alice (ReceivedAck {bob; n_a} ))
     )
@@ -39,6 +38,8 @@ val n_a_secrecy:
   (ensures
      attacker_knows tr n_a ==>
      principal_is_corrupt tr alice \/ principal_is_corrupt tr bob
+     // You can also use the equivalent formulation:
+     // ~(principal_is_corrupt tr alice \/ principal_is_corrupt tr bob) ==> ~(attacker_knows tr n_a)
   )
 
 /// The proof idea is the following:
