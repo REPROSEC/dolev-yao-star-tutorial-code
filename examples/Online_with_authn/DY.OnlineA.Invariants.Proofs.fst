@@ -278,7 +278,7 @@ let event_initiating_injective tr alice bob bob' n_a = ()
 
 /// The invariant lemma for the final protocol step `receive_ack_invariant`
 
-#push-options "--ifuel 2 --z3rlimit 35"
+#push-options "--ifuel 2 --z3rlimit 45"
 val receive_ack_invariant:
   alice:principal -> keys_sid:state_id -> msg_ts:timestamp ->
   tr:trace ->

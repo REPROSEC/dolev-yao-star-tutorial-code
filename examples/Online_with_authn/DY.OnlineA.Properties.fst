@@ -16,19 +16,19 @@ open DY.OnlineA.Invariants
 /// Unless one of Alice or Bob are corrupt.
 
 val responder_authentication:
-  tr:trace -> 
+  tr:trace -> ts:timestamp ->
   alice:principal -> bob:principal ->
   n_a:bytes ->
   Lemma
   (requires
      trace_invariant tr /\
-     state_was_set_some_id tr alice (ReceivedAck {bob; n_a})
+     state_was_set_at_some_id tr ts alice (ReceivedAck {bob; n_a})
   )
   (ensures
      is_corrupt tr (principal_label alice) \/ is_corrupt tr (principal_label bob) \/
-     event_triggered tr bob (Responding {alice; bob; n_a})
+     event_triggered (prefix tr ts) bob (Responding {alice; bob; n_a})
   )
-let responder_authentication tr alice bob n_a = ()
+let responder_authentication tr ts alice bob n_a = ()
 
 
 /// We still have nonce secrecy:

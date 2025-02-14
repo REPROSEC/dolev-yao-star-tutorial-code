@@ -20,8 +20,45 @@ let rand_generated_before tr b =
   is_not_empty tr /\
   exists ts. rand_generated_at tr ts b
 
+val prefix_inv:
+  {|protocol_invariants|} ->
+  tr:trace ->
+  p:trace ->
+  Lemma 
+    (requires
+      trace_invariant tr /\
+      p <$ tr
+    )
+    (ensures
+      trace_invariant p
+    )
+    [SMTPat (trace_invariant tr)
+    ; SMTPat (p <$ tr)]
+let rec prefix_inv tr p = 
+  reveal_opaque (`%trace_invariant) trace_invariant
+  ; reveal_opaque (`%grows) (grows #label)
+  ; reveal_opaque (`%prefix) (prefix #label)
+  ;if trace_length tr = trace_length p
+    then ()
+    else prefix_inv (init tr) p
+
 let state_was_set_some_id (#a:Type) {|local_state a|} tr prin (cont : a) =
   exists sid. DY.Lib.state_was_set tr prin sid cont
+
+val state_was_set_some_id_grows:
+  #a:Type -> {|lsa:local_state a|} ->
+  tr1:trace -> tr2:trace -> 
+  prin:principal -> content:a ->
+  Lemma
+  (requires tr1 <$ tr2
+    /\ state_was_set_some_id tr1 prin content
+  )
+  (ensures
+    state_was_set_some_id tr2 prin content
+  )
+  [SMTPat (state_was_set_some_id #a #lsa tr1 prin content); SMTPat (tr1 <$ tr2)]
+let state_was_set_some_id_grows #a #ls tr1 tr2 prin content  = ()
+
 
 val empty_invariants:
   {| protocol_invariants |} ->
@@ -29,6 +66,136 @@ val empty_invariants:
 let empty_invariants #pinvs = 
   normalize_term_spec trace_invariant
 
+val state_was_set_at_core: 
+  (tr:trace) -> (ts: timestamp) -> 
+  (prin: principal) ->
+  sid:state_id ->
+  (cont:bytes) ->
+  prop
+let state_was_set_at_core tr ts prin sid cont =
+  entry_at tr ts (SetState prin sid cont)
+
+val state_was_set_at_tagged:
+  (tr:trace) -> (ts: timestamp) -> 
+  tag:string ->
+  (prin: principal) ->
+  sid:state_id ->
+  (cont:bytes) ->
+  prop
+let state_was_set_at_tagged tr ts tag prin sid cont =
+ state_was_set_at_core tr ts prin sid (serialize tagged_state {tag; content = cont})
+
+val state_was_set_at:
+  #a:Type -> {|local_state a|} ->
+  (tr:trace) -> (ts: timestamp) -> 
+  (prin: principal) ->
+  sid:state_id ->
+  (cont:a) ->
+  prop
+let state_was_set_at #a #ls tr ts prin sid cont =
+  state_was_set_at_tagged tr ts ls.tag prin sid (serialize a cont)
+
+val state_was_set_at_some_id:
+  #a:Type -> {|local_state a|} ->
+  (tr:trace) -> (ts: timestamp) -> 
+  (prin: principal) ->
+  (cont:a) ->
+  prop
+let state_was_set_at_some_id #a #ls tr ts prin cont =
+  exists sid. state_was_set_at tr ts prin sid cont
+
+
+
+val entry_at_invariant:
+  {|protocol_invariants|} ->
+  tr:trace -> ts:timestamp -> 
+  en:trace_entry ->
+  Lemma 
+    (requires 
+      trace_invariant tr
+      /\ entry_at tr ts en )
+    (ensures
+      trace_entry_invariant (prefix tr ts) en
+    )
+    [ SMTPat (trace_invariant tr)
+    ; SMTPat (entry_at tr ts en)
+    ]
+let rec entry_at_invariant tr ts en = 
+  reveal_opaque (`%trace_invariant) trace_invariant;
+  if ts = last_timestamp tr 
+   then (reveal_opaque (`%prefix) (prefix #label))
+   else ( 
+    assert(init tr <$ tr);
+    entry_at_invariant (init tr) ts en
+   )
+
+val state_was_set_at_core_implies_pred_on_prefix:
+ {|protocol_invariants|} -> 
+ tr:trace -> ts:timestamp ->
+ prin:principal -> sid:state_id -> cont:bytes ->
+ Lemma 
+  (requires 
+    trace_invariant tr 
+    /\ state_was_set_at_core tr ts prin sid cont
+  )
+  (ensures
+    state_pred.pred (prefix tr ts) prin sid cont
+  )
+  [SMTPat (trace_invariant tr)
+  ; SMTPat (state_was_set_at_core tr ts prin sid cont)
+  ]
+let state_was_set_at_core_implies_pred_on_prefix #invs tr ts prin sid cont =
+   let en = (SetState prin sid cont) in
+   assert(trace_entry_invariant (prefix tr ts) en)
+
+val state_was_set_at_tagged_implies_pred_on_prefix:
+ {|protocol_invariants|} -> 
+ tag:string -> spred:local_bytes_state_predicate tag ->
+ tr:trace -> ts:timestamp ->
+ prin:principal -> sid:state_id -> cont:bytes ->
+ Lemma 
+  (requires 
+    trace_invariant tr 
+    /\ has_local_bytes_state_predicate (|tag, spred|)
+    /\ state_was_set_at_tagged tr ts tag prin sid cont
+  )
+  (ensures
+    spred.pred (prefix tr ts) prin sid cont
+  )
+  [ SMTPat (trace_invariant tr)
+  ; SMTPat (has_local_bytes_state_predicate (|tag, spred|))
+  ; SMTPat (state_was_set_at_tagged tr ts tag prin sid cont)
+  ]
+let state_was_set_at_tagged_implies_pred_on_prefix #invs tag spred tr ts prin sid cont =
+  let full_content_bytes = (serialize tagged_state {tag; content = cont}) in
+  assert(state_pred.pred (prefix tr ts) prin sid full_content_bytes); 
+  parse_serialize_inv_lemma #bytes tagged_state {tag; content=cont};
+  reveal_opaque (`%has_local_bytes_state_predicate) (has_local_bytes_state_predicate);
+  local_eq_global_lemma split_local_bytes_state_predicate_params state_pred.pred tag spred ((prefix tr ts), prin, sid, full_content_bytes) tag ((prefix tr ts), prin, sid, cont)
+
+
+val state_was_set_at_implies_pred_on_prefix:
+ #a:Type -> {|local_state a|} ->
+  {|protocol_invariants|} -> 
+ spred:local_state_predicate a ->
+ tr:trace -> ts:timestamp ->
+ prin:principal -> sid:state_id -> cont:a ->
+ Lemma 
+  (requires 
+    trace_invariant tr 
+    /\ has_local_state_predicate spred
+    /\ state_was_set_at tr ts prin sid cont
+  )
+  (ensures
+    spred.pred (prefix tr ts) prin sid cont
+  )
+  [ SMTPat (trace_invariant tr)
+  ; SMTPat (has_local_state_predicate spred)
+  ; SMTPat (state_was_set_at tr ts prin sid cont)
+  ]
+let state_was_set_at_implies_pred_on_prefix #a #ls #invs spred tr ts prin sid cont =
+  parse_serialize_inv_lemma #bytes a cont
+  
 
 /// Lookup the most recent state of a principal satisfying some property.
 /// Returns the state and corresponding state id,
