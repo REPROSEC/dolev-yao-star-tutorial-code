@@ -3,6 +3,7 @@ module DY.Example.NSL.SecurityProperties
 open Comparse
 open DY.Core
 open DY.Lib
+open DY.Simplified
 open DY.Example.NSL.Protocol.Total.Proof
 open DY.Example.NSL.Protocol.Stateful
 open DY.Example.NSL.Protocol.Stateful.Proof
@@ -26,12 +27,12 @@ val initiator_authentication:
   alice:principal -> bob:principal -> n_a:bytes -> n_b:bytes ->
   Lemma
   (requires
-    state_was_set_some_id tr bob (ResponderReceivedMsg3 alice n_a n_b) /\
-    trace_invariant tr
+    complies_with_nsl tr /\
+    state_was_set_some_id tr bob (ResponderReceivedMsg3 alice n_a n_b)
   )
   (ensures
-    is_corrupt tr (principal_label alice) \/ is_corrupt tr (principal_label bob) \/
-  state_was_set_some_id tr alice (InitiatorSendingMsg1 bob n_a)
+    principal_is_corrupt tr alice \/ principal_is_corrupt tr bob \/
+    state_was_set_some_id tr alice (InitiatorSendingMsg1 bob n_a)
   )
 let initiator_authentication tr i alice bob n_a n_b = ()
 
@@ -44,11 +45,11 @@ val responder_authentication:
   alice:principal -> bob:principal -> n_a:bytes -> n_b:bytes ->
   Lemma
   (requires
-    state_was_set_some_id tr alice (InitiatorSendingMsg3 bob n_a n_b) /\
-    trace_invariant tr
+    complies_with_nsl tr /\
+    state_was_set_some_id tr alice (InitiatorSendingMsg3 bob n_a n_b)
   )
   (ensures
-    is_corrupt tr (principal_label alice) \/ is_corrupt tr (principal_label bob) \/
+    principal_is_corrupt tr alice \/ principal_is_corrupt tr bob \/
     state_was_set_some_id tr bob (ResponderSendingMsg2 alice n_a n_b)
   )
 let responder_authentication tr i alice bob n_a n_b = ()
@@ -60,14 +61,14 @@ val n_a_secrecy:
   tr:trace -> alice:principal -> bob:principal -> n_a:bytes ->
   Lemma
   (requires
-    attacker_knows tr n_a /\
-    trace_invariant tr /\ (
-      (exists sess_id. state_was_set tr alice sess_id (InitiatorSendingMsg1 bob n_a)) \/
-      (exists sess_id n_b. state_was_set tr alice sess_id (InitiatorSendingMsg3 bob n_a n_b)) \/
-      (exists sess_id n_b. state_was_set tr bob sess_id (ResponderReceivedMsg3 alice n_a n_b))
+    complies_with_nsl tr /\ 
+    attacker_knows tr n_a /\ (
+      (state_was_set_some_id tr alice (InitiatorSendingMsg1 bob n_a)) \/
+      (exists n_b. state_was_set_some_id tr alice (InitiatorSendingMsg3 bob n_a n_b)) \/
+      (exists n_b. state_was_set_some_id tr bob (ResponderReceivedMsg3 alice n_a n_b))
     )
   )
-  (ensures is_corrupt tr (principal_label alice) \/ is_corrupt tr (principal_label bob))
+  (ensures principal_is_corrupt tr alice \/ principal_is_corrupt tr bob)
 let n_a_secrecy tr alice bob n_a =
   attacker_only_knows_publishable_values tr n_a
 
@@ -78,13 +79,13 @@ val n_b_secrecy:
   tr:trace -> alice:principal -> bob:principal -> n_b:bytes ->
   Lemma
   (requires
-    attacker_knows tr n_b /\
-    trace_invariant tr /\ (
-      (exists sess_id n_a. state_was_set tr bob sess_id (ResponderSendingMsg2 alice n_a n_b)) \/
-      (exists sess_id n_a. state_was_set tr bob sess_id (ResponderReceivedMsg3 alice n_a n_b)) \/
-      (exists sess_id n_a. state_was_set tr alice sess_id (InitiatorSendingMsg3 bob n_a n_b))
+    complies_with_nsl tr /\
+    attacker_knows tr n_b /\ (
+      (exists n_a. state_was_set_some_id tr bob (ResponderSendingMsg2 alice n_a n_b)) \/
+      (exists n_a. state_was_set_some_id tr bob (ResponderReceivedMsg3 alice n_a n_b)) \/
+      (exists n_a. state_was_set_some_id tr alice (InitiatorSendingMsg3 bob n_a n_b))
     )
   )
-  (ensures is_corrupt tr (principal_label alice) \/ is_corrupt tr (principal_label bob))
+  (ensures principal_is_corrupt tr alice \/ principal_is_corrupt tr bob)
 let n_b_secrecy tr alice bob n_b =
   attacker_only_knows_publishable_values tr n_b

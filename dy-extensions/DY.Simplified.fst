@@ -12,6 +12,8 @@ let gen_rand =
 let gen_rand_labeled l =
     mk_rand NoUsage l 32
 
+let principal_is_corrupt tr prin = is_corrupt tr (principal_label prin)
+
 val start_new_session:
   #a:Type -> {| local_state a |} ->
   principal -> a ->

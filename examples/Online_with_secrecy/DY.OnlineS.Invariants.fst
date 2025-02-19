@@ -197,6 +197,8 @@ instance protocol_invariants_p: protocol_invariants = {
 }
 
 
+let complies_with_online_protocol tr = trace_invariant #protocol_invariants_p tr
+
 (*** Helper Lemmas for the Secrecy Proof ***)
 
 // TODO: Can all of this be hidden somehow?
