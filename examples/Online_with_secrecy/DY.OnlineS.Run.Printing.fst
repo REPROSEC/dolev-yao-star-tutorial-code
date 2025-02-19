@@ -4,6 +4,8 @@ open DY.Core
 open DY.Lib
 open Comparse
 
+open DY.Simplified
+
 open DY.OnlineS.Data
 
 /// Helper functions for trace printing.
@@ -32,5 +34,5 @@ val get_trace_to_string_printers: trace_to_string_printers
 let get_trace_to_string_printers  = 
   trace_to_string_printers_builder 
     message_to_string
-    [(local_state_state.tag, state_to_string)]
+    ((local_state_state.tag, state_to_string) :: default_state_to_string)
     []

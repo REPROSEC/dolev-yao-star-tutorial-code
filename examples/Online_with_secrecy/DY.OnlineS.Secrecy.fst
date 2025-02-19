@@ -3,6 +3,8 @@ module DY.OnlineS.Secrecy
 open Comparse
 open DY.Core
 open DY.Lib
+open DY.Simplified
+open DY.Extend
 
 open DY.OnlineS.Data
 open DY.OnlineS.Invariants
@@ -28,13 +30,17 @@ val n_a_secrecy:
   tr:trace -> alice:principal -> bob:principal -> n_a:bytes ->
   Lemma
   (requires
-    attacker_knows tr n_a /\
-    trace_invariant tr /\ (
-      (exists sess_id. state_was_set tr alice sess_id (SentPing {bob; n_a})) \/
-      (exists sess_id. state_was_set tr alice sess_id (ReceivedAck {bob; n_a} ))
+      complies_with_online_protocol tr /\ (
+      (state_was_set_some_id tr alice (SentPing {bob; n_a})) \/
+      (state_was_set_some_id tr alice (ReceivedAck {bob; n_a} ))
     )
   )
-  (ensures is_corrupt tr (principal_label alice) \/ is_corrupt tr (principal_label bob))
+  (ensures
+     attacker_knows tr n_a ==>
+     principal_is_corrupt tr alice \/ principal_is_corrupt tr bob
+     // You can also use the equivalent formulation:
+     // ~(principal_is_corrupt tr alice \/ principal_is_corrupt tr bob) ==> ~(attacker_knows tr n_a)
+  )
 
 /// The proof idea is the following:
 /// For any nonce stored in one of Alice's states (SentPing or ReceivedAck)
@@ -47,4 +53,6 @@ val n_a_secrecy:
 /// The proof thus only consists of calling the main attacker lemma
 /// `attacker_only_knows_publishable_values`.
 let n_a_secrecy tr alice bob n_a =
-  attacker_only_knows_publishable_values tr n_a
+  introduce attacker_knows tr n_a ==> principal_is_corrupt tr alice \/ principal_is_corrupt tr bob
+  with _ . 
+    attacker_only_knows_publishable_values tr n_a
