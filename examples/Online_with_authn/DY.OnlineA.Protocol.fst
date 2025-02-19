@@ -10,7 +10,7 @@ open DY.Extend
 open DY.OnlineA.Data
 
 /// Here we define the DY* mode of the "Online?" protocol,
-/// an extension of the simple Two Message protocol:
+/// an extension of the simple Two-Message protocol:
 /// the two messages are now (asymmetrically) encrypted
 ///
 /// A -> B: enc{Ping (A, n_A)}_B
