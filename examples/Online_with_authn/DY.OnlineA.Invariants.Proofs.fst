@@ -26,16 +26,16 @@ open DY.OnlineA.Invariants
 (*** Sending a Ping maintains the invariants ***)
 
 val send_ping_invariant_short_version:
-  alice:principal -> bob:principal -> keys_sid:state_id ->
+  alice:principal -> bob:principal -> alice_private_keys_sid:state_id ->
   tr:trace ->
   Lemma
   ( requires trace_invariant tr
   )
   (ensures (
-    let (_ , tr_out) = send_ping alice bob keys_sid tr in
+    let (_ , tr_out) = send_ping alice bob alice_private_keys_sid tr in
     trace_invariant tr_out
   ))
-let send_ping_invariant_short_version alice bob keys_sid  tr =
+let send_ping_invariant_short_version alice bob alice_private_keys_sid  tr =
   let (n_a, tr_rand) = gen_rand_labeled (nonce_label alice bob) tr in
   (* We need to adapt the proof to the new send_ping function,
      where we trigger the Initiating event right after nonce generation.
@@ -43,22 +43,22 @@ let send_ping_invariant_short_version alice bob keys_sid  tr =
   let (_, tr_ev) = trigger_event alice (Initiating {alice; bob; n_a}) tr_rand in
   let ping = Ping {alice; n_a} in 
   serialize_wf_lemma message_t (is_knowable_by (nonce_label alice bob) tr_ev) ping;
-  pke_enc_for_is_publishable tr_ev alice bob keys_sid key_tag ping
+  pke_enc_for_is_publishable tr_ev alice bob alice_private_keys_sid key_tag ping
 
 
 (*** Replying to a Ping maintains the invariants ***)
 
 val decode_ping_invariant:
-  bob:principal -> keys_sid:state_id ->
+  bob:principal -> bob_private_keys_sid:state_id ->
   msg:bytes ->
   tr:trace ->
   Lemma
   (requires trace_invariant tr)
   (ensures (
-    let (_, tr_out) = decode_ping bob keys_sid msg tr in
+    let (_, tr_out) = decode_ping bob bob_private_keys_sid msg tr in
     trace_invariant tr_out
   ))
-let decode_ping_invariant bob keys_sid msg tr = ()
+let decode_ping_invariant bob bob_private_keys_sid msg tr = ()
 
 (* For the second protocol step (`receive_ping_and_send_ack`),
    we need a helper lemma: `decode_ping_proof`.
@@ -69,7 +69,7 @@ let decode_ping_invariant bob keys_sid msg tr = ()
 
 val decode_ping_proof:
   tr:trace ->
-  bob:principal -> keys_sid:state_id ->
+  bob:principal -> bob_private_keys_sid:state_id ->
   msg:bytes ->
   Lemma
   (requires (
@@ -77,11 +77,11 @@ val decode_ping_proof:
     /\ bytes_invariant tr msg
   ))
   (ensures (
-    match decode_ping bob keys_sid msg tr with
+    match decode_ping bob bob_private_keys_sid msg tr with
     | (None, _) -> True
     | (Some png, _) -> (
         let n_a = png.n_a in
-        let (sk_bob, _) = get_private_key bob keys_sid (LongTermPkeKey key_tag) tr in
+        let (sk_bob, _) = get_private_key bob bob_private_keys_sid (LongTermPkeKey key_tag) tr in
         Some? sk_bob /\
         bytes_invariant tr n_a /\
         is_knowable_by (nonce_label png.alice bob) tr n_a /\
@@ -91,11 +91,11 @@ val decode_ping_proof:
      )
    )
   )
-let decode_ping_proof tr bob keys_sid msg =
-    match decode_ping bob keys_sid msg tr with
+let decode_ping_proof tr bob bob_private_keys_sid msg =
+    match decode_ping bob bob_private_keys_sid msg tr with
     | (None, _) -> ()
     | (Some png, _) -> (
-        bytes_invariant_pke_dec_with_key_lookup tr #message_t #parseable_serializeable_bytes_message_t bob keys_sid key_tag msg;
+        bytes_invariant_pke_dec_with_key_lookup tr #message_t #parseable_serializeable_bytes_message_t bob bob_private_keys_sid key_tag msg;
         let plain = serialize message_t (Ping png) in
         parse_wf_lemma message_t (bytes_invariant tr) plain;
         FStar.Classical.move_requires (parse_wf_lemma message_t (is_publishable tr)) plain
@@ -108,20 +108,20 @@ let decode_ping_proof tr bob keys_sid msg =
 
 #push-options "--z3rlimit 30"
 val receive_ping_and_send_ack_invariant:
-  bob:principal -> keys_sid:global_sess_ids -> ts:timestamp ->
+  bob:principal -> bob_private_keys_sid:state_id -> bob_public_keys_sid:state_id -> ts:timestamp ->
   tr:trace ->
   Lemma
   ( requires trace_invariant tr
   )
   (ensures (
-    let (_ , tr_out) = receive_ping_and_send_ack bob keys_sid ts tr in
+    let (_ , tr_out) = receive_ping_and_send_ack bob bob_private_keys_sid bob_public_keys_sid ts tr in
     trace_invariant tr_out
   ))
-let receive_ping_and_send_ack_invariant bob bob_keys_sid msg_ts tr =
+let receive_ping_and_send_ack_invariant bob bob_private_keys_sid bob_public_keys_sid msg_ts tr =
   match recv_msg msg_ts tr with
   | (None, _ ) -> ()
   | (Some msg, _) -> (
-      match decode_ping bob bob_keys_sid.private_keys msg tr with
+      match decode_ping bob bob_private_keys_sid msg tr with
       | (None, _) -> ()
       | (Some png, _) -> (
           let n_a = png.n_a in
@@ -150,12 +150,12 @@ let receive_ping_and_send_ack_invariant bob bob_keys_sid msg_ts tr =
              Looking at the pke_pred for the Ping,
              we get that alice must have triggered an Initiating event.
           *)
-          decode_ping_proof tr bob bob_keys_sid.private_keys msg;
+          decode_ping_proof tr bob bob_private_keys_sid msg;
           (* We thus get that the trace invariant is satisfied after triggering the event.
           *)
           assert(trace_invariant tr_ev);
 
-          match pke_enc_for bob alice bob_keys_sid.pki key_tag ack tr_ev with
+          match pke_enc_for bob alice bob_public_keys_sid key_tag ack tr_ev with
           | (None, _) -> ()
           | (Some ack_encrypted, tr_ack) ->(
                 assert(trace_invariant tr_ack);
@@ -175,7 +175,7 @@ let receive_ping_and_send_ack_invariant bob bob_keys_sid msg_ts tr =
                      You can check:
                      assert(pke_pred.pred tr (long_term_key_type_to_usage (LongTermPkeKey key_tag) alice) (serialize message_t ack));
                   *)
-                pke_enc_for_is_publishable tr_ev bob alice bob_keys_sid.pki key_tag ack;
+                pke_enc_for_is_publishable tr_ev bob alice bob_public_keys_sid key_tag ack;
                 assert(trace_invariant tr_msg);
 
                 let st = (SentAck {alice = png.alice; n_a = png.n_a}) in
@@ -190,17 +190,17 @@ let receive_ping_and_send_ack_invariant bob bob_keys_sid msg_ts tr =
 (*** Receiving an Ack maintains the invariants ***)
 
 val decode_ack_invariant:
-  alice:principal -> keys_sid:state_id -> cipher:bytes ->
+  alice:principal -> alice_private_keys_sid:state_id -> cipher:bytes ->
   tr:trace ->
   Lemma
   (requires
     trace_invariant tr
   )
   (ensures (
-    let (_, tr_out) = decode_ack alice keys_sid cipher tr in
+    let (_, tr_out) = decode_ack alice alice_private_keys_sid cipher tr in
     trace_invariant tr_out
   ))
-let decode_ack_invariant alice keys_sid msg tr = ()
+let decode_ack_invariant alice alice_private_keys_sid msg tr = ()
 
 
 /// Since we now have a non-trivial property for the ReceivedAck state,
@@ -211,7 +211,7 @@ let decode_ack_invariant alice keys_sid msg tr = ()
 
 val decode_ack_proof:
   tr:trace ->
-  alice:principal -> keys_sid:state_id ->
+  alice:principal -> alice_private_keys_sid:state_id ->
   msg:bytes ->
   Lemma
   (requires (
@@ -219,11 +219,11 @@ val decode_ack_proof:
     /\ bytes_invariant tr msg
   ))
   (ensures (
-    match decode_ack alice keys_sid msg tr with
+    match decode_ack alice alice_private_keys_sid msg tr with
     | (None, _) -> True
     | (Some ack, _) -> (
         let n_a = ack.n_a in
-        let (sk_alice, _) = get_private_key alice keys_sid (LongTermPkeKey key_tag) tr in
+        let (sk_alice, _) = get_private_key alice alice_private_keys_sid (LongTermPkeKey key_tag) tr in
         Some? sk_alice /\
         bytes_invariant tr n_a /\
         ( is_publishable tr n_a
@@ -231,11 +231,11 @@ val decode_ack_proof:
         )
     )
   ))
-let decode_ack_proof tr alice keys_sid msg =
-    match decode_ack alice keys_sid msg tr with
+let decode_ack_proof tr alice alice_private_keys_sid msg =
+    match decode_ack alice alice_private_keys_sid msg tr with
     | (None, _) -> ()
     | (Some ack, _) -> (
-        bytes_invariant_pke_dec_with_key_lookup tr #message_t #parseable_serializeable_bytes_message_t alice keys_sid key_tag msg;
+        bytes_invariant_pke_dec_with_key_lookup tr #message_t #parseable_serializeable_bytes_message_t alice alice_private_keys_sid key_tag msg;
         let plain = serialize message_t (Ack ack) in
         parse_wf_lemma message_t (bytes_invariant tr) plain;
         FStar.Classical.move_requires (parse_wf_lemma message_t (is_publishable tr)) plain
@@ -280,21 +280,21 @@ let event_initiating_injective tr alice bob bob' n_a = ()
 
 #push-options "--z3rlimit 50"
 val receive_ack_invariant:
-  alice:principal -> keys_sid:state_id -> msg_ts:timestamp ->
+  alice:principal -> alice_private_keys_sid:state_id -> msg_ts:timestamp ->
   tr:trace ->
   Lemma
   (requires
     trace_invariant tr
   )
   (ensures (
-    let (_, tr_out) = receive_ack alice keys_sid msg_ts tr in
+    let (_, tr_out) = receive_ack alice alice_private_keys_sid msg_ts tr in
     trace_invariant tr_out
   ))
-let receive_ack_invariant alice keys_sid msg_ts tr =
+let receive_ack_invariant alice alice_private_keys_sid msg_ts tr =
   match recv_msg msg_ts tr with
   | (None, _) -> ()
   | (Some msg, _) -> (
-      match decode_ack alice keys_sid msg tr with
+      match decode_ack alice alice_private_keys_sid msg tr with
       | (None, _) -> ()
       | (Some ack, _) -> (
           let n_a = ack.n_a in
@@ -319,8 +319,8 @@ let receive_ack_invariant alice keys_sid msg_ts tr =
               // *)
               introduce ~(is_publishable tr n_a) ==> event_triggered tr bob (Responding {alice; bob; n_a})
               with _. (
-                decode_ack_proof tr alice keys_sid msg;
-                let (sk_alice, _) = get_private_key alice keys_sid (LongTermPkeKey key_tag) tr in
+                decode_ack_proof tr alice alice_private_keys_sid msg;
+                let (sk_alice, _) = get_private_key alice alice_private_keys_sid (LongTermPkeKey key_tag) tr in
                 assert(pke_pred.pred tr (long_term_key_type_to_usage (LongTermPkeKey key_tag) alice) (pk (Some?.v sk_alice)) (serialize message_t (Ack ack)));
                 assert(exists bob'. event_triggered tr bob (Responding {alice; bob = bob'; n_a}));
                 (* From the pke_pred for the decoded Ack,

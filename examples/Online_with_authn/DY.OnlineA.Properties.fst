@@ -3,7 +3,7 @@ module DY.OnlineA.Properties
 open Comparse
 open DY.Core
 open DY.Lib
-
+open DY.Simplified
 open DY.Extend
 
 open DY.OnlineA.Data
@@ -25,7 +25,7 @@ val responder_authentication:
      event_triggered_at tr ts alice (Finishing {alice; bob; n_a})
   )
   (ensures
-     is_corrupt tr (principal_label alice) \/ is_corrupt tr (principal_label bob) \/
+     principal_is_corrupt tr alice \/ principal_is_corrupt tr bob \/
      event_triggered (prefix tr ts) bob (Responding {alice; bob; n_a})
   )
 let responder_authentication tr ts alice bob n_a = ()
@@ -37,12 +37,12 @@ val n_a_secrecy:
   tr:trace -> alice:principal -> bob:principal -> n_a:bytes ->
   Lemma
   (requires
-    attacker_knows tr n_a /\
     trace_invariant tr /\ (
       (state_was_set_some_id tr alice (SentPing {bob; n_a})) \/
       (state_was_set_some_id tr alice (ReceivedAck {bob; n_a} ))
-    )
+    ) /\
+    attacker_knows tr n_a
   )
-  (ensures is_corrupt tr (principal_label alice) \/ is_corrupt tr (principal_label bob))
+  (ensures principal_is_corrupt tr alice \/ principal_is_corrupt tr bob)
 let n_a_secrecy tr alice bob n_a =
   attacker_only_knows_publishable_values tr n_a

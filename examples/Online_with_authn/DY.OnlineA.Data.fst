@@ -111,7 +111,7 @@ instance parseable_serializeable_bytes_state_t: parseable_serializeable bytes st
 /// so that they are distinguishable from any internal DY* states. 
 
 instance local_state_state: local_state state_t = {
-  tag = "P.State";
+  tag = "Online.State";
   format = parseable_serializeable_bytes_state_t;
 }
 
@@ -119,24 +119,11 @@ instance local_state_state: local_state state_t = {
 
 (*** PKI ***)
 
-/// For en-/de-cryption we assume some PKI.
-/// I.e., every participant has some private decryption keys
-/// and some public encryption keys from other participants.
-/// All private keys of a participant will be stored in one session
-/// and all public keys that the participant knows will be stored in another session.
-/// For each participant, we collect both these session IDs in a global record.
-
-type global_sess_ids = {
-  pki: state_id;
-  private_keys: state_id;
-}
-
 /// Similarly as for states,
 /// we tag the keys that are used on the protocol level,
 /// so that they can not be confused with other keys.
-/// (TODO: rephrase this)
 
-let key_tag = "P.Key"
+let key_tag = "Online.Key"
 
 
 (*** Event type ***)
@@ -150,8 +137,6 @@ let key_tag = "P.Key"
 
 /// Just as for messages and states,
 /// we define abstract event types
-
-
 
 /// The abstract type of the Initiating event
 [@@ with_bytes bytes]
@@ -168,7 +153,6 @@ type ev_respond_t = {
   bob:principal;
   n_a:bytes
 }
-
 
 /// The abstract type of the Finishing event
 [@@ with_bytes bytes]
@@ -197,6 +181,6 @@ type event_t =
 
 /// Make the overall event type an instance of DY.Lib event class
 instance event_event_t: event event_t = {
-  tag = "P.Event";
+  tag = "Online.Event";
   format = mk_parseable_serializeable ps_event_t;
 }
