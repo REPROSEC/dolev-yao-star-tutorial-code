@@ -17,7 +17,7 @@ val message_to_string: bytes -> option string
 let message_to_string b =
   match? parse message_t b with
   | Ping p -> Some (Printf.sprintf "Ping [name = (%s), n_a = (%s)]" (p.alice) (bytes_to_string p.n_a))
-  | Ack a -> Some (Printf.sprintf "Ping [n_a = (%s)]" (bytes_to_string a.n_a))
+  | Ack a -> Some (Printf.sprintf "Ack [n_a = (%s)]" (bytes_to_string a.n_a))
 
 
 val state_to_string: bytes -> option string
