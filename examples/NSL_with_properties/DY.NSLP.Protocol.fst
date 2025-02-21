@@ -69,23 +69,27 @@ let send_msg1 alice bob alice_public_keys_sid =
 /// * the message is not of the right type, i.e., not a first message
 /// * encryption fails (for example, if Bob doesn't have a public key for Alice)
 
+val decode_msg1: principal -> state_id -> bytes -> traceful (option message1_t)
+let decode_msg1 bob bob_private_keys_sid msg =
+  let*? msg1 = pke_dec_with_key_lookup #message_t bob bob_private_keys_sid key_tag msg in
+  guard_tr (Msg1? msg1);*?
+  return (Some (Msg1?.m1 msg1))
+  
+
 val receive_msg1_and_send_msg2: principal -> state_id -> state_id -> timestamp -> traceful (option (state_id & timestamp))
 let receive_msg1_and_send_msg2 bob bob_private_keys_sid bob_public_keys_sid msg_ts =
   let*? msg = recv_msg msg_ts in
-
-  let*? msg1_ = pke_dec_with_key_lookup #message_t bob bob_private_keys_sid key_tag msg in
-  guard_tr (Msg1? msg1_);*?
-  let Msg1 msg1 = msg1_ in
+  let*? msg1 = decode_msg1 bob bob_private_keys_sid msg in
   let alice = msg1.alice in
   let n_a = msg1.n_a in
 
   let* n_b = gen_rand_labeled (nonce_label alice bob) in
+  trigger_event bob (Responding1 {alice; bob; n_a; n_b});*
 
   let msg2 = Msg2 {bob; n_a; n_b} in
   let*? msg2_encrypted = pke_enc_for bob alice bob_public_keys_sid key_tag msg2 in
   let* msg2_ts = send_msg msg2_encrypted in
 
-  trigger_event bob (Responding1 {alice; bob; n_a; n_b});*
 
   let state = SentMsg2 {alice; n_a; n_b} in
   let* sess_id = start_new_session bob state in

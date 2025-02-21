@@ -43,9 +43,9 @@ type message3_t = {
 
 [@@ with_bytes bytes]
 type message_t =
-  | Msg1: message1_t -> message_t
-  | Msg2: message2_t -> message_t
-  | Msg3: message3_t -> message_t
+  | Msg1: (m1:message1_t) -> message_t
+  | Msg2: (m2:message2_t) -> message_t
+  | Msg3: (m3:message3_t) -> message_t
 
 /// Using Comparse to generate parser and serializer for the message type
 
