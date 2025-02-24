@@ -54,7 +54,7 @@ type message_t =
 %splice [ps_message3_t] (gen_parser (`message3_t))
 %splice [ps_message_t] (gen_parser (`message_t))
 
-instance parseable_serializeable_bytes_message: parseable_serializeable bytes message_t = mk_parseable_serializeable ps_message_t
+instance parseable_serializeable_bytes_message_t: parseable_serializeable bytes message_t = mk_parseable_serializeable ps_message_t
 
 (*** State Type ***)
 

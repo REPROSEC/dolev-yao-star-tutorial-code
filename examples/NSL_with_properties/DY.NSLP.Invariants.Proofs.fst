@@ -55,6 +55,33 @@ val decode_msg1_invariant:
 let decode_msg1_invariant bob bob_private_keys_sid msg tr = ()
 
 
+val decode_msg1_proof:
+  bob:principal -> bob_private_keys_sid:state_id ->
+  msg:bytes ->
+  tr:trace ->
+  Lemma
+    (requires 
+       trace_invariant tr /\
+       bytes_invariant tr msg
+    )
+    (ensures (
+      match decode_msg1 bob bob_private_keys_sid msg tr with
+      | (None, _) -> True
+      | (Some msg1, _) -> (
+          let n_a = msg1.n_a in
+          is_knowable_by (nonce_label msg1.alice bob) tr n_a
+        )
+    ))
+let decode_msg1_proof bob bob_private_keys_sid msg tr =
+      match decode_msg1 bob bob_private_keys_sid msg tr with
+      | (None, _) -> ()
+      | (Some msg1, _) -> (
+          bytes_invariant_pke_dec_with_key_lookup tr #message_t #parseable_serializeable_bytes_message_t bob bob_private_keys_sid key_tag msg;
+          let plain = serialize message_t (Msg1 msg1) in
+          parse_wf_lemma message_t (bytes_invariant tr) plain;
+          FStar.Classical.move_requires (parse_wf_lemma message_t (is_publishable tr)) plain
+  )
+
 val receive_msg1_and_send_msg2_invariant:
   bob:principal -> 
   bob_private_keys_sid:state_id -> bob_public_keys_sid:state_id ->
@@ -73,8 +100,7 @@ let receive_msg1_and_send_msg2_invariant bob bob_private_keys_sid bob_public_key
   | (Some msg, _) -> (
       match decode_msg1 bob bob_private_keys_sid msg tr with
       | (None, _) -> ()
-      | (Some {alice; n_a}, tr_decode) -> (
-          assert(trace_invariant tr_decode);
+      | (Some {alice; n_a}, _) -> (
           let (n_b, tr_rand) = gen_rand_labeled (nonce_label alice bob) tr in
           assert(trace_invariant tr_rand);
           let (_, tr_ev) = trigger_event bob (Responding1 {alice; bob; n_a; n_b}) tr_rand in
@@ -84,11 +110,15 @@ let receive_msg1_and_send_msg2_invariant bob bob_private_keys_sid bob_public_key
           | (None, _) -> ()
           | (Some msg2_encrypted, tr_msg2) ->(
               assert(trace_invariant tr_msg2);
-              let (msg2_ts, tr_msg2) = send_msg msg2_encrypted tr_msg2 in
-              assume(trace_invariant tr_msg2);
+              let (msg2_ts, tr_msg2_) = send_msg msg2_encrypted tr_msg2 in
+              decode_msg1_proof bob bob_private_keys_sid msg tr;
+              serialize_wf_lemma message_t (is_knowable_by (nonce_label alice bob) tr_rand) msg2;
+              pke_enc_for_is_publishable tr_ev bob alice bob_public_keys_sid key_tag msg2;
+              assert(is_publishable tr_msg2 msg2_encrypted);
+              assert(trace_invariant tr_msg2_);
               let state = SentMsg2 {alice; n_a; n_b} in
-              let (sess_id, tr_sess) = start_new_session bob state tr_msg2 in
-              assume(trace_invariant tr_sess)
+              let (sess_id, tr_sess) = start_new_session bob state tr_msg2_ in
+              assert(trace_invariant tr_sess)
           )
       )
   )
