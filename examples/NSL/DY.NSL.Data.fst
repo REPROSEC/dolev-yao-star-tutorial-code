@@ -43,9 +43,9 @@ type message3_t = {
 
 [@@ with_bytes bytes]
 type message_t =
-  | Msg1: message1_t -> message_t
-  | Msg2: message2_t -> message_t
-  | Msg3: message3_t -> message_t
+  | Msg1: (m1:message1_t) -> message_t
+  | Msg2: (m2:message2_t) -> message_t
+  | Msg3: (m3:message3_t) -> message_t
 
 /// Using Comparse to generate parser and serializer for the message type
 
@@ -54,7 +54,7 @@ type message_t =
 %splice [ps_message3_t] (gen_parser (`message3_t))
 %splice [ps_message_t] (gen_parser (`message_t))
 
-instance parseable_serializeable_bytes_message: parseable_serializeable bytes message_t = mk_parseable_serializeable ps_message_t
+instance parseable_serializeable_bytes_message_t: parseable_serializeable bytes message_t = mk_parseable_serializeable ps_message_t
 
 (*** State Type ***)
 
@@ -92,8 +92,8 @@ type received_msg3_t  = {
 type state_t =
   | SentMsg1: (sentmsg1:sent_msg1_t) -> state_t
   | SentMsg2: (sentmsg2:sent_msg2_t) -> state_t
-  | SentMsg3: sent_msg3_t -> state_t
-  | ReceivedMsg3: received_msg3_t -> state_t
+  | SentMsg3: (sentmsg3:sent_msg3_t) -> state_t
+  | ReceivedMsg3: (receivedmsg3:received_msg3_t) -> state_t
 
 /// As for messages, we use Comparse to generate
 /// a parser and serializer for our abstract state types.

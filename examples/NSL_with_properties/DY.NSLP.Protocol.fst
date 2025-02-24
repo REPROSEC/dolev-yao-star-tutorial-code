@@ -141,9 +141,7 @@ let receive_msg2_and_send_msg3 alice alice_private_keys_sid alice_public_keys_si
 
   let msg3 = Msg3 {n_b} in
   let*? msg3_encrypted = pke_enc_for alice bob alice_public_keys_sid key_tag msg3 in
-
- let* msg3_ts = send_msg msg3_encrypted in
-
+  let* msg3_ts = send_msg msg3_encrypted in
 
   let state = SentMsg3 {bob; n_a; n_b} in
   set_state alice sid state;*

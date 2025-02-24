@@ -92,8 +92,8 @@ type received_msg3_t  = {
 type state_t =
   | SentMsg1: (sentmsg1:sent_msg1_t) -> state_t
   | SentMsg2: (sentmsg2:sent_msg2_t) -> state_t
-  | SentMsg3: sent_msg3_t -> state_t
-  | ReceivedMsg3: received_msg3_t -> state_t
+  | SentMsg3: (sentmsg3:sent_msg3_t) -> state_t
+  | ReceivedMsg3: (receivedmsg3:received_msg3_t) -> state_t
 
 /// As for messages, we use Comparse to generate
 /// a parser and serializer for our abstract state types.
@@ -169,10 +169,10 @@ type ev_finish_t = {
 
 [@@ with_bytes bytes]
 type event_t =
-  | Initiating: ev_init_t -> event_t
+  | Initiating:  ev_init_t -> event_t
   | Responding1: ev_respond1_t -> event_t
   | Responding2: ev_respond2_t -> event_t
-  | Finishing: ev_finish_t -> event_t 
+  | Finishing:   ev_finish_t -> event_t 
 
 %splice [ps_ev_init_t] (gen_parser (`ev_init_t))
 %splice [ps_ev_respond1_t] (gen_parser (`ev_respond1_t))

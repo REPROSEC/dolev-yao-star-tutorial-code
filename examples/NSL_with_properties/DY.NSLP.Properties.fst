@@ -58,35 +58,35 @@ let n_b_secrecy tr alice bob n_b =
 /// unless the attacker corrupted Alice or Bob.
 
 val initiator_authentication:
-  tr:trace -> i:timestamp ->
+  tr:trace -> ts:timestamp ->
   alice:principal -> bob:principal -> n_a:bytes -> n_b:bytes ->
   Lemma
   (requires
-    event_triggered_at tr i bob (Finishing {alice; bob; n_a; n_b}) /\
+    event_triggered_at tr ts bob (Finishing {alice; bob; n_a; n_b}) /\
     trace_invariant tr
   )
   (ensures
-    principal_is_corrupt (prefix tr i) alice \/
-    principal_is_corrupt (prefix tr i) bob \/
-    event_triggered (prefix tr i) alice (Responding2 {alice; bob; n_a; n_b})
+    principal_is_corrupt (prefix tr ts) alice \/
+    principal_is_corrupt (prefix tr ts) bob \/
+    event_triggered (prefix tr ts) alice (Responding2 {alice; bob; n_a; n_b})
   )
-let initiator_authentication tr i alice bob n_a n_b = ()
+let initiator_authentication tr ts alice bob n_a n_b = ()
 
 /// If Alice thinks she talks with Bob,
 /// then Bob thinks he talk to Alice (with the same nonces),
 /// unless the attacker corrupted Alice or Bob.
 
 val responder_authentication:
-  tr:trace -> i:timestamp ->
+  tr:trace -> ts:timestamp ->
   alice:principal -> bob:principal -> n_a:bytes -> n_b:bytes ->
   Lemma
   (requires
-    event_triggered_at tr i alice (Responding2 {alice; bob; n_a; n_b}) /\
+    event_triggered_at tr ts alice (Responding2 {alice; bob; n_a; n_b}) /\
     trace_invariant tr
   )
   (ensures
-    principal_is_corrupt (prefix tr i) alice \/
-    principal_is_corrupt (prefix tr i) bob \/
-    event_triggered (prefix tr i) bob (Responding1 {alice; bob; n_a; n_b})
+    principal_is_corrupt (prefix tr ts) alice \/
+    principal_is_corrupt (prefix tr ts) bob \/
+    event_triggered (prefix tr ts) bob (Responding1 {alice; bob; n_a; n_b})
   )
-let responder_authentication tr i alice bob n_a n_b = ()
+let responder_authentication tr ts alice bob n_a n_b = ()
