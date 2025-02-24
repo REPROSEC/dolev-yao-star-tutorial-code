@@ -69,7 +69,8 @@ val decode_msg1_proof:
       | (None, _) -> True
       | (Some msg1, _) -> (
           let n_a = msg1.n_a in
-          is_knowable_by (nonce_label msg1.alice bob) tr n_a
+          let alice = msg1.alice in
+          is_knowable_by (nonce_label alice bob) tr n_a
         )
     ))
 let decode_msg1_proof bob bob_private_keys_sid msg tr =
@@ -114,7 +115,6 @@ let receive_msg1_and_send_msg2_invariant bob bob_private_keys_sid bob_public_key
               decode_msg1_proof bob bob_private_keys_sid msg tr;
               serialize_wf_lemma message_t (is_knowable_by (nonce_label alice bob) tr_rand) msg2;
               pke_enc_for_is_publishable tr_ev bob alice bob_public_keys_sid key_tag msg2;
-              assert(is_publishable tr_msg2 msg2_encrypted);
               assert(trace_invariant tr_msg2_);
               let state = SentMsg2 {alice; n_a; n_b} in
               let (sess_id, tr_sess) = start_new_session bob state tr_msg2_ in
@@ -153,7 +153,7 @@ val decode_msg2_proof:
           let bob = msg2.bob in
           let n_a = msg2.n_a in
           let n_b = msg2.n_b in
-          is_knowable_by (nonce_label alice msg2.bob) tr n_b /\
+          is_knowable_by (nonce_label alice bob) tr n_b /\
           ( is_publishable tr n_a \/
             event_triggered tr bob (Responding1 {alice; bob; n_a; n_b}))
        )
