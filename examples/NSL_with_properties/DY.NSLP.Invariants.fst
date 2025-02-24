@@ -139,7 +139,9 @@ let event_predicate_nsl: event_predicate event_t =
     | Finishing {alice; bob; n_a; n_b} -> (
       prin == bob /\
       event_triggered tr bob (Responding1 {alice; bob; n_a; n_b}) /\ (
-        is_corrupt tr (nonce_label alice bob) \/
+        // is_corrupt tr (nonce_label alice bob) 
+        is_publishable tr n_b
+        \/
         event_triggered tr alice (Responding2 {alice; bob; n_a; n_b})
       )
     )

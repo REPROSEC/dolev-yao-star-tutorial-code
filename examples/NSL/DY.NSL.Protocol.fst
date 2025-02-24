@@ -162,6 +162,6 @@ let receive_msg3 bob bob_private_keys_sid msg3_ts =
   let alice = (SentMsg2?.sentmsg2 st).alice in
   let n_a = (SentMsg2?.sentmsg2 st).n_a in
 
-  set_state alice sid (ReceivedMsg3 {alice; n_a; n_b});*
+  set_state bob sid (ReceivedMsg3 {alice; n_a; n_b});*
 
   return (Some sid)

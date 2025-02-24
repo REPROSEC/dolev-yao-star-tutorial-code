@@ -222,3 +222,87 @@ let receive_msg2_and_send_msg3_invariant alice alice_private_keys_sid alice_publ
 #pop-options
 
 (*** Receiving the Final Message ***)
+
+
+val decode_msg3_invariant:
+  bob:principal -> bob_private_keys_sid:state_id ->
+  msg:bytes ->
+  tr:trace ->
+  Lemma
+  (requires trace_invariant tr)
+  (ensures (
+    let (_, tr_out) = decode_msg3 bob bob_private_keys_sid msg tr in
+    trace_invariant tr_out
+  ))
+let decode_msg3_invariant bob bob_private_keys_sid msg tr = ()
+
+val decode_msg3_proof:
+  bob:principal -> bob_private_keys_sid:state_id ->
+  msg:bytes ->
+  tr:trace ->
+  Lemma
+    (requires 
+       trace_invariant tr /\
+       bytes_invariant tr msg
+    )
+    (ensures (
+      match decode_msg3 bob bob_private_keys_sid msg tr with
+      | (None, _) -> True
+      | (Some msg3, _) -> (
+           let n_b = msg3.n_b in
+           is_publishable tr n_b \/ (
+              exists alice n_a.
+                  get_label tr n_b `can_flow tr` (nonce_label alice bob) /\
+                  event_triggered tr alice (Responding2 {alice; bob; n_a; n_b})
+           )
+        )
+    ))
+let decode_msg3_proof bob bob_private_keys_sid msg tr = 
+  match decode_msg3 bob bob_private_keys_sid msg tr with
+  | (None, _) -> ()
+  | (Some msg3, _) -> (
+      bytes_invariant_pke_dec_with_key_lookup tr #message_t #parseable_serializeable_bytes_message_t bob bob_private_keys_sid key_tag msg;
+      let plain = serialize message_t (Msg3 msg3) in
+      parse_wf_lemma message_t (bytes_invariant tr) plain;
+      FStar.Classical.move_requires (parse_wf_lemma message_t (is_publishable tr)) plain
+  )  
+
+val receive_msg3_invariant:
+  bob:principal ->
+  bob_private_keys_sid:state_id ->
+  msg_ts:timestamp ->
+  tr:trace ->
+  Lemma
+    (requires
+      trace_invariant tr
+    )
+    (ensures (
+      let (_, tr_out) = receive_msg3 bob bob_private_keys_sid msg_ts tr in
+      trace_invariant tr_out
+    ))
+let receive_msg3_invariant bob bob_private_keys_sid msg_ts tr = 
+  match recv_msg msg_ts tr with
+  | (None, _ ) -> ()
+  | (Some msg3_, _) -> (
+       match decode_msg3 bob bob_private_keys_sid msg3_ tr with
+       | (None, _ ) -> ()
+       | (Some msg3, _) -> (
+            let n_b = msg3.n_b in
+            let p = (fun (st:state_t) -> 
+                        SentMsg2? st
+                    && (SentMsg2?.sentmsg2 st).n_b = n_b
+                    ) in
+            match lookup_state #state_t bob p tr with
+            | (None, _ ) -> ()
+            | (Some (sid, st), _ ) -> (
+                 let alice = (SentMsg2?.sentmsg2 st).alice in
+                 let n_a = (SentMsg2?.sentmsg2 st).n_a in
+
+                 let (_, tr_ev) = trigger_event bob (Finishing {alice; bob; n_a; n_b}) tr in
+                 decode_msg3_proof bob bob_private_keys_sid msg3_ tr;
+                 assert(trace_invariant tr_ev);
+                 let (_, tr_st) = set_state bob sid (ReceivedMsg3 {alice; n_a; n_b}) tr_ev in
+                 assert(trace_invariant tr_st)
+            )
+       )
+  )

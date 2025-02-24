@@ -163,12 +163,18 @@ let receive_msg2_and_send_msg3 alice alice_private_keys_sid alice_public_keys_si
 /// * the message is not of the right type, i.e., not a reply
 /// * there is no prior session related to n_a
 
+
+val decode_msg3: principal -> state_id -> bytes -> traceful (option message3_t)
+let decode_msg3 bob bob_private_keys_sid msg =
+  let*? msg3 = pke_dec_with_key_lookup #message_t bob bob_private_keys_sid key_tag msg in
+  guard_tr (Msg3? msg3);*?
+  return (Some (Msg3?.m3 msg3))
+  
+
 val receive_msg3: principal -> state_id -> timestamp -> traceful (option state_id)
 let receive_msg3 bob bob_private_keys_sid msg3_ts =
   let*? msg = recv_msg msg3_ts in
-  let*? msg3 = pke_dec_with_key_lookup #message_t bob bob_private_keys_sid key_tag msg in
-  guard_tr (Msg3? msg3);*?
-  let Msg3 msg3 = msg3 in
+  let*? msg3 = decode_msg3 bob bob_private_keys_sid msg in
   let n_b = msg3.n_b in
 
   let*? (sid, st) = lookup_state #state_t bob
@@ -182,6 +188,6 @@ let receive_msg3 bob bob_private_keys_sid msg3_ts =
 
   trigger_event bob (Finishing {alice; bob; n_a; n_b});*
 
-  set_state alice sid (ReceivedMsg3 {alice; n_a; n_b});*
+  set_state bob sid (ReceivedMsg3 {alice; n_a; n_b});*
 
   return (Some sid)
