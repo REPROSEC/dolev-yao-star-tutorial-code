@@ -125,4 +125,100 @@ let receive_msg1_and_send_msg2_invariant bob bob_private_keys_sid bob_public_key
 
 (*** Sending the Third Message ***)
 
+val decode_msg2_invariant:
+  alice:principal -> alice_private_keys_sid:state_id ->
+  msg:bytes ->
+  tr:trace ->
+  Lemma
+  (requires trace_invariant tr)
+  (ensures (
+    let (_, tr_out) = decode_msg2 alice alice_private_keys_sid msg tr in
+    trace_invariant tr_out
+  ))
+let decode_msg2_invariant alice alice_private_keys_sid msg tr = ()
+
+val decode_msg2_proof:
+  alice:principal -> alice_private_keys_sid:state_id ->
+  msg:bytes ->
+  tr:trace ->
+  Lemma
+    (requires 
+       trace_invariant tr /\
+       bytes_invariant tr msg
+    )
+    (ensures (
+      match decode_msg2 alice alice_private_keys_sid msg tr with
+      | (None, _) -> True
+      | (Some msg2, _) -> (
+          let bob = msg2.bob in
+          let n_a = msg2.n_a in
+          let n_b = msg2.n_b in
+          is_knowable_by (nonce_label alice msg2.bob) tr n_b /\
+          ( is_publishable tr n_a \/
+            event_triggered tr bob (Responding1 {alice; bob; n_a; n_b}))
+       )
+    ))
+let decode_msg2_proof alice alice_private_keys_sid msg tr =
+  match decode_msg2 alice alice_private_keys_sid msg tr with
+  | (None, _) -> ()
+  | (Some msg2, _) -> (
+      bytes_invariant_pke_dec_with_key_lookup tr #message_t #parseable_serializeable_bytes_message_t alice alice_private_keys_sid key_tag msg;
+      let plain = serialize message_t (Msg2 msg2) in
+      parse_wf_lemma message_t (bytes_invariant tr) plain;
+      FStar.Classical.move_requires (parse_wf_lemma message_t (is_publishable tr)) plain
+  )  
+
+#push-options "--z3rlimit 30"
+val receive_msg2_and_send_msg3_invariant:
+  alice:principal -> 
+  alice_private_keys_sid:state_id -> alice_public_keys_sid:state_id ->
+  msg_ts:timestamp -> 
+  tr:trace ->
+  Lemma
+  ( requires trace_invariant tr
+  )
+  (ensures (
+    let (_ , tr_out) = receive_msg2_and_send_msg3 alice alice_private_keys_sid alice_public_keys_sid msg_ts tr in
+    trace_invariant tr_out
+  ))
+let receive_msg2_and_send_msg3_invariant alice alice_private_keys_sid alice_public_keys_sid msg_ts tr =
+  match recv_msg msg_ts tr with
+  | (None, _) -> ()
+  | (Some msg2_, _) -> (
+      match decode_msg2 alice alice_private_keys_sid msg2_ tr with
+      | (None, _ ) -> ()
+      | (Some msg2, _) -> (
+            let bob = msg2.bob in
+            let n_a = msg2.n_a in
+            let n_b = msg2.n_b in
+
+            let p = (fun (st:state_t) -> 
+                        SentMsg1? st
+                    && (SentMsg1?.sentmsg1 st).n_a = n_a
+                    && (SentMsg1?.sentmsg1 st).bob = bob
+                    ) in
+            match lookup_state #state_t alice p tr with
+            | (None, _) -> ()
+            | (Some (sid, st), _ ) -> (
+                 let ((), tr_ev) = trigger_event alice (Responding2 {alice; bob; n_a; n_b}) tr in
+                 decode_msg2_proof alice alice_private_keys_sid msg2_ tr;
+                 assert(trace_invariant tr_ev);
+                 let msg3 = Msg3 {n_b} in
+                 match pke_enc_for alice bob alice_public_keys_sid key_tag msg3 tr_ev with
+                 | (None, _ ) -> ()
+                 | (Some msg3_encrypted, tr_enc) -> (
+                      assert(trace_invariant tr_enc);
+                      let (_, tr_msg3) = send_msg msg3_encrypted tr_enc in
+                      serialize_wf_lemma message_t (is_knowable_by (nonce_label alice bob) tr) msg3;
+                      pke_enc_for_is_publishable tr_ev alice bob alice_public_keys_sid key_tag msg3; 
+                      assert(trace_invariant tr_msg3);
+                      let state = SentMsg3 {bob; n_a; n_b} in
+                      let ((), tr_st) = set_state alice sid state tr_msg3 in
+                      assert(trace_invariant tr_st)
+                 )
+            )
+      )
+  )
+#pop-options
+
 (*** Receiving the Final Message ***)

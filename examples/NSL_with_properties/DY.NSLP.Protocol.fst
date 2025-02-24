@@ -113,13 +113,18 @@ let receive_msg1_and_send_msg2 bob bob_private_keys_sid bob_public_keys_sid msg_
 /// * encryption fails (for example, if Bob doesn't have a public key for Alice)
 /// * there is no prior session related to Bob and n_a
 
+val decode_msg2: principal -> state_id -> bytes -> traceful (option message2_t)
+let decode_msg2 alice alice_private_keys_sid msg =
+  let*? msg2 = pke_dec_with_key_lookup #message_t alice alice_private_keys_sid key_tag msg in
+  guard_tr (Msg2? msg2);*?
+  return (Some (Msg2?.m2 msg2))
+  
+
 val receive_msg2_and_send_msg3: principal -> state_id -> state_id -> timestamp -> traceful (option (state_id & timestamp))
 let receive_msg2_and_send_msg3 alice alice_private_keys_sid alice_public_keys_sid msg_ts =
   let*? msg = recv_msg msg_ts in
 
-  let*? msg2_ = pke_dec_with_key_lookup #message_t alice alice_private_keys_sid key_tag msg in
-  guard_tr (Msg2? msg2_);*?
-  let Msg2 msg2 = msg2_ in
+  let*? msg2 = decode_msg2 alice alice_private_keys_sid msg in
   let bob = msg2.bob in
   let n_a = msg2.n_a in
   let n_b = msg2.n_b in
@@ -131,13 +136,14 @@ let receive_msg2_and_send_msg3 alice alice_private_keys_sid alice_public_keys_si
       && (SentMsg1?.sentmsg1 st).bob = bob
     ) in
   guard_tr(SentMsg1? st);*?
-  
+
+  trigger_event alice (Responding2 {alice; bob; n_a; n_b});*
 
   let msg3 = Msg3 {n_b} in
   let*? msg3_encrypted = pke_enc_for alice bob alice_public_keys_sid key_tag msg3 in
-  let* msg3_ts = send_msg msg3_encrypted in
 
-  trigger_event alice (Responding2 {alice; bob; n_a; n_b});*
+ let* msg3_ts = send_msg msg3_encrypted in
+
 
   let state = SentMsg3 {bob; n_a; n_b} in
   set_state alice sid state;*
