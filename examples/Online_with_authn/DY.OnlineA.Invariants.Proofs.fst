@@ -26,16 +26,16 @@ open DY.OnlineA.Invariants
 (*** Sending a Ping maintains the invariants ***)
 
 val send_ping_invariant_short_version:
-  alice:principal -> bob:principal -> alice_private_keys_sid:state_id ->
+  alice:principal -> bob:principal -> alice_public_keys_sid:state_id ->
   tr:trace ->
   Lemma
   ( requires trace_invariant tr
   )
   (ensures (
-    let (_ , tr_out) = send_ping alice bob alice_private_keys_sid tr in
+    let (_ , tr_out) = send_ping alice bob alice_public_keys_sid tr in
     trace_invariant tr_out
   ))
-let send_ping_invariant_short_version alice bob alice_private_keys_sid  tr =
+let send_ping_invariant_short_version alice bob alice_public_keys_sid tr =
   let (n_a, tr_rand) = gen_rand_labeled (nonce_label alice bob) tr in
   (* We need to adapt the proof to the new send_ping function,
      where we trigger the Initiating event right after nonce generation.
@@ -43,7 +43,7 @@ let send_ping_invariant_short_version alice bob alice_private_keys_sid  tr =
   let (_, tr_ev) = trigger_event alice (Initiating {alice; bob; n_a}) tr_rand in
   let ping = Ping {alice; n_a} in 
   serialize_wf_lemma message_t (is_knowable_by (nonce_label alice bob) tr_ev) ping;
-  pke_enc_for_is_publishable tr_ev alice bob alice_private_keys_sid key_tag ping
+  pke_enc_for_is_publishable tr_ev alice bob alice_public_keys_sid key_tag ping
 
 
 (*** Replying to a Ping maintains the invariants ***)
@@ -79,9 +79,7 @@ val decode_ping_proof:
   (ensures (
     match decode_ping bob bob_private_keys_sid msg tr with
     | (None, _) -> True
-    | (Some png, _) -> (
-        let n_a = png.n_a in
-        let alice = png.alice in
+    | (Some {alice; n_a}, _) -> (
         is_knowable_by (nonce_label alice bob) tr n_a /\
         ( is_publishable tr n_a \/ 
           event_triggered tr alice (Initiating {alice; bob; n_a}) 
@@ -102,8 +100,6 @@ let decode_ping_proof tr bob bob_private_keys_sid msg =
 
 /// The invariant lemma for the `receive_ping_and_send_ack` step
 
-
-#push-options "--z3rlimit 30"
 val receive_ping_and_send_ack_invariant:
   bob:principal -> bob_private_keys_sid:state_id -> bob_public_keys_sid:state_id -> ts:timestamp ->
   tr:trace ->
@@ -120,10 +116,7 @@ let receive_ping_and_send_ack_invariant bob bob_private_keys_sid bob_public_keys
   | (Some msg, _) -> (
       match decode_ping bob bob_private_keys_sid msg tr with
       | (None, _) -> ()
-      | (Some png, _) -> (
-          let n_a = png.n_a in
-          let alice = png.alice in
-          
+      | (Some {alice; n_a}, _) -> (          
           let ack = Ack {n_a} in
 
           (* We need to adapt the proof to the new receive_ping_and_send_ack function,
@@ -169,13 +162,12 @@ let receive_ping_and_send_ack_invariant bob bob_private_keys_sid bob_public_keys
                 pke_enc_for_is_publishable tr_ev bob alice bob_public_keys_sid key_tag ack;
                 assert(trace_invariant tr_msg);
 
-                let st = (SentAck {alice = png.alice; n_a = png.n_a}) in
+                let st = (SentAck {alice; n_a}) in
                 let (sess_id, tr_sess) = start_new_session bob st tr_msg in
                 assert(trace_invariant tr_sess)
            )
       )
   )
-#pop-options
 
 
 (*** Receiving an Ack maintains the invariants ***)
@@ -212,8 +204,7 @@ val decode_ack_proof:
   (ensures (
     match decode_ack alice alice_private_keys_sid msg tr with
     | (None, _) -> True
-    | (Some ack, _) -> (
-        let n_a = ack.n_a in
+    | (Some {n_a}, _) -> (
         is_publishable tr n_a \/ 
         exists bob. event_triggered tr bob (Responding {alice; bob; n_a})
     )
