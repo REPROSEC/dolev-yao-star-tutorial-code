@@ -168,7 +168,7 @@ let decode_msg2_proof alice alice_private_keys_sid msg tr =
       FStar.Classical.move_requires (parse_wf_lemma message_t (is_publishable tr)) plain
   )  
 
-#push-options "--z3rlimit 30"
+#push-options "--z3rlimit 50"
 val receive_msg2_and_send_msg3_invariant:
   alice:principal -> 
   alice_private_keys_sid:state_id -> alice_public_keys_sid:state_id ->
