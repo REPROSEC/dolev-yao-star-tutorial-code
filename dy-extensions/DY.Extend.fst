@@ -5,6 +5,28 @@ open DY.Core
 open DY.Lib
 open DY.Core.Trace.Base
 
+val prefix_inv:
+  {|protocol_invariants|} ->
+  tr:trace ->
+  p:trace ->
+  Lemma 
+    (requires
+      trace_invariant tr /\
+      p <$ tr
+    )
+    (ensures
+      trace_invariant p
+    )
+    [SMTPat (trace_invariant tr)
+    ; SMTPat (p <$ tr)]
+let rec prefix_inv tr p = 
+  reveal_opaque (`%trace_invariant) trace_invariant
+  ; reveal_opaque (`%grows) (grows #label)
+  ; reveal_opaque (`%prefix) (prefix #label)
+  ;if trace_length tr = trace_length p
+    then ()
+    else prefix_inv (init tr) p
+
 val is_secret_is_knowable: 
   {|cinvs: crypto_invariants|} ->
   l:label  -> 

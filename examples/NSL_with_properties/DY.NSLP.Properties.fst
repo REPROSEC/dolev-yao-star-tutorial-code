@@ -54,7 +54,7 @@ let n_b_secrecy tr alice bob n_b =
 
 
 /// If Bob thinks he talks with Alice,
-/// then Alice thinks she talk to Bob (with the same nonces),
+/// then Alice thinks she talks to Bob (with the same nonces),
 /// unless the attacker corrupted Alice or Bob.
 
 val initiator_authentication:
@@ -67,13 +67,15 @@ val initiator_authentication:
   )
   (ensures
     principal_is_corrupt (prefix tr ts) alice \/
-    principal_is_corrupt (prefix tr ts) bob \/
-    event_triggered (prefix tr ts) alice (Responding2 {alice; bob; n_a; n_b})
+    principal_is_corrupt (prefix tr ts) bob \/ (
+      event_triggered (prefix tr ts) alice (Responding2 {alice; bob; n_a; n_b}) /\
+      event_triggered (prefix tr ts) alice (Initiating {alice; bob; n_a})
+    )
   )
 let initiator_authentication tr ts alice bob n_a n_b = ()
 
 /// If Alice thinks she talks with Bob,
-/// then Bob thinks he talk to Alice (with the same nonces),
+/// then Bob thinks he talks to Alice (with the same nonces),
 /// unless the attacker corrupted Alice or Bob.
 
 val responder_authentication:
