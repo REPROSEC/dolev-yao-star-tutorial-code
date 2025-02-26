@@ -66,10 +66,10 @@ val initiator_authentication:
     trace_invariant tr
   )
   (ensures
-    principal_is_corrupt (prefix tr ts) alice \/
-    principal_is_corrupt (prefix tr ts) bob \/ (
-      event_triggered (prefix tr ts) alice (Responding2 {alice; bob; n_a; n_b}) /\
-      event_triggered (prefix tr ts) alice (Initiating {alice; bob; n_a})
+    principal_is_corrupt tr alice \/
+    principal_is_corrupt tr bob \/ (
+      event_triggered_before tr ts alice (Responding2 {alice; bob; n_a; n_b}) /\
+      event_triggered_before tr ts alice (Initiating {alice; bob; n_a})
     )
   )
 let initiator_authentication tr ts alice bob n_a n_b = ()
@@ -87,8 +87,8 @@ val responder_authentication:
     trace_invariant tr
   )
   (ensures
-    principal_is_corrupt (prefix tr ts) alice \/
-    principal_is_corrupt (prefix tr ts) bob \/
-    event_triggered (prefix tr ts) bob (Responding1 {alice; bob; n_a; n_b})
+    principal_is_corrupt tr alice \/
+    principal_is_corrupt tr bob \/
+    event_triggered_before tr ts bob (Responding1 {alice; bob; n_a; n_b})
   )
 let responder_authentication tr ts alice bob n_a n_b = ()

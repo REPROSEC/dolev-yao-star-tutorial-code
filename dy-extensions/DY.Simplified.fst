@@ -6,6 +6,11 @@ open DY.Lib
 
 #set-options "--fuel 0 --ifuel 1 --z3rlimit 25  --z3cliopt 'smt.qi.eager_threshold=100'"
 
+val event_triggered_before:
+  #a:Type -> {|event a|} ->
+  tr:trace -> ts:timestamp{ts <= trace_length tr} -> principal -> a -> prop
+let event_triggered_before tr ts prin ev = event_triggered (prefix tr ts) prin ev
+
 let gen_rand =
   mk_rand NoUsage public 32
 
