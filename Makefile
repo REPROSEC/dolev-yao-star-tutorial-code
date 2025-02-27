@@ -8,7 +8,7 @@ INNER_SOURCE_DIRS = dy-extensions
 # SOURCE_DIRS = $(addprefix $(DY_HOME)/src/, $(INNER_SOURCE_DIRS))
 SOURCE_DIRS = $(addprefix $(TUTORIAL_HOME)/, $(INNER_SOURCE_DIRS))
 
-INNER_EXAMPLE_DIRS = nsl_pk_only_one_event_lookup TwoMessageP Online Online_with_secrecy Online_with_authn Basics
+INNER_EXAMPLE_DIRS = NSL NSL_with_properties TwoMessageP Online Online_with_secrecy Online_with_authn Basics
 EXAMPLE_DIRS ?= $(addprefix $(TUTORIAL_HOME)/examples/, $(INNER_EXAMPLE_DIRS))
 
 
