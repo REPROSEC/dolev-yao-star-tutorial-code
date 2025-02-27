@@ -77,7 +77,7 @@ type state_t =
 
 instance parseable_serializeable_bytes_state_t: parseable_serializeable bytes state_t = mk_parseable_serializeable ps_state_t
 
-instance local_state_state: local_state state_t = {
+instance local_state_state_t: local_state state_t = {
   tag = "Online.State";
   format = parseable_serializeable_bytes_state_t;
 }

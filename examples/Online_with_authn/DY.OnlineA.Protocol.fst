@@ -33,6 +33,7 @@ open DY.OnlineA.Data
 
 /// Alice sends the first message to Bob:
 /// * Alice generates a new nonce [n_a]
+/// * triggers an "Initiating" event
 /// * encrypts the message (Alice, n_a) for Bob
 /// * sends the encrypted message
 /// * stores n_a and Bob in a state (in a new session)
@@ -71,6 +72,7 @@ let send_ping alice bob alice_public_keys_sid =
 /// Bob receives the first messages and replies:
 /// * read the message from the trace
 /// * decrypt the message to (Alice, n_a)
+/// * trigger a "Responding" event
 /// * encrypt the reply (n_a) for Alice
 /// * send the encrypted reply
 /// * store n_a and Alice in a state in a new session
@@ -102,9 +104,8 @@ val receive_ping_and_send_ack: principal -> state_id -> state_id -> timestamp ->
 let receive_ping_and_send_ack bob bob_private_keys_sid bob_public_keys_sid msg_ts =
   let*? msg = recv_msg msg_ts in
   let*? png = decode_ping bob bob_private_keys_sid msg in
-
+  let alice = png.alice in  
   let n_a = png.n_a in
-  let alice = png.alice in
   
   (* This is the new step, where Bob triggers the Responding event for the current run
   *)
@@ -127,6 +128,7 @@ let receive_ping_and_send_ack bob bob_private_keys_sid bob_public_keys_sid msg_t
 /// * read the message from the trace
 /// * decrypt the message to (n_a)
 /// * check if Alice previously sent n_a in some session
+/// * trigger a "Finishing" event
 /// * store completion of this session in a new state
 /// Returns the ID of the session that is marked as completed.
 /// The step fails, if one of
@@ -154,7 +156,6 @@ val receive_ack: principal -> state_id -> timestamp -> traceful (option state_id
 let receive_ack alice alice_private_keys_sid ack_ts =
   let*? msg = recv_msg ack_ts in
   let*? ack = decode_ack alice alice_private_keys_sid msg in
-
   let n_a = ack.n_a in
 
   let*? (sid, st) = lookup_state #state_t alice

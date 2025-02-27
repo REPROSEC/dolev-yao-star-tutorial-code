@@ -30,5 +30,5 @@ val get_trace_to_string_printers: trace_to_string_printers
 let get_trace_to_string_printers  = 
   trace_to_string_printers_builder 
     message_to_string
-    [(local_state_state.tag, state_to_string)]
+    [(local_state_state_t.tag, state_to_string)]
     []

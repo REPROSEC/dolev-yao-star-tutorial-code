@@ -103,7 +103,6 @@ let receive_ping_and_send_ack bob bob_private_keys_sid bob_public_keys_sid msg_t
   let*? msg = recv_msg msg_ts in
   // decode the received expected ping
   let*? png = decode_ping bob bob_private_keys_sid msg in
-
   let alice = png.alice in
   let n_a = png.n_a in
 
@@ -157,7 +156,6 @@ let receive_ack alice alice_private_keys_sid ack_ts =
   let*? msg = recv_msg ack_ts in
   // decode the received expected ack
   let*? ack = decode_ack alice alice_private_keys_sid msg in
-
   let n_a = ack.n_a in
 
   let*? (sid, st) = lookup_state #state_t alice

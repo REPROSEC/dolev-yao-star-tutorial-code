@@ -109,7 +109,7 @@ instance parseable_serializeable_bytes_state_t: parseable_serializeable bytes st
 /// We tag our protocol level states,
 /// so that they are distinguishable from any internal DY* states. 
 
-instance local_state_state: local_state state_t = {
+instance local_state_state_t: local_state state_t = {
   tag = "TwoMessage.State";
   format = parseable_serializeable_bytes_state_t;
 }

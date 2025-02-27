@@ -27,6 +27,7 @@ val responder_authentication:
   (ensures
      principal_is_corrupt tr alice \/ principal_is_corrupt tr bob \/
      event_triggered (prefix tr ts) bob (Responding {alice; bob; n_a})
+     // /\ event_triggered (prefix tr ts) alice (Initiating {alice; bob; n_a})
   )
 let responder_authentication tr ts alice bob n_a = ()
 

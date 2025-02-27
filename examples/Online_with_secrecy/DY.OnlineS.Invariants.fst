@@ -35,10 +35,10 @@ open DY.OnlineS.Protocol
 
 
 // ignore this for now
-instance crypto_usages_p : crypto_usages = default_crypto_usages
+instance crypto_usages_online : crypto_usages = default_crypto_usages
 
-#push-options "--ifuel 2"
-let crypto_p : crypto_predicates = { 
+#push-options "--ifuel 3"
+let crypto_predicates_online : crypto_predicates = { 
   default_crypto_predicates with 
   (* we restrict when a message is allowed to be encrypted 
      with some secret key
@@ -57,7 +57,7 @@ let crypto_p : crypto_predicates = {
       *)
       sk_usage == long_term_key_type_to_usage (LongTermPkeKey key_tag) prin /\
       (match parse message_t msg with
-      | Some (Ping ping) ->
+      | Some (Ping {alice; n_a}) ->
           (* a Ping message can only be encrypted if
              (Or: if you decrypt a Ping from an honest party 
              you get the guarantees that:)
@@ -67,10 +67,8 @@ let crypto_p : crypto_predicates = {
              * and the intended receiver of the message (bob)
           *)
           let bob = prin in
-          let alice = ping.alice in
-          let n_a = ping.n_a in
           get_label tr n_a == nonce_label alice bob
-      | Some (Ack ack) ->
+      | Some (Ack {n_a}) ->
          (* No conditions / guarantees needed for an Ack *)
           True
       | _ -> False // other messages can not be encrypted
@@ -89,9 +87,9 @@ let crypto_p : crypto_predicates = {
 
 /// Collecting the usages and prediates in the final crypto invariants
 
-instance crypto_invariants_p: crypto_invariants = {
-  usages = crypto_usages_p;
-  preds =  crypto_p
+instance crypto_invariants_online: crypto_invariants = {
+  usages = crypto_usages_online;
+  preds =  crypto_predicates_online
 }
 
 
@@ -106,10 +104,10 @@ instance crypto_invariants_p: crypto_invariants = {
 
 #push-options "--ifuel 2 --z3cliopt 'smt.qi.eager_threshold=50'"
 (* We restrict what states are allowed to be stored by principals *)
-let state_predicate_p: local_state_predicate state_t = {
+let state_predicate_online: local_state_predicate state_t = {
   pred = (fun tr prin sess_id st ->
     match st with
-    | SentPing ping -> (
+    | SentPing {bob; n_a} -> (
         (* a SentPing state may only be stored if
            the stored nonce is labeled for
            * the storing principal (alice)
@@ -117,11 +115,9 @@ let state_predicate_p: local_state_predicate state_t = {
              (the intended receiver of the Ping: bob)
         *) 
         let alice = prin in
-        let bob = ping.bob in
-        let n_a = ping.n_a in
         is_secret (nonce_label alice bob) tr n_a
     )
-    | SentAck ack -> (
+    | SentAck {alice; n_a} -> (
         (* a SentAck state may only be stored if
            the stored nonce is readable by
            the storing principal (bob)
@@ -130,10 +126,9 @@ let state_predicate_p: local_state_predicate state_t = {
            and is enforced by the `pred_knowable` Lemma.
         *)
         let bob = prin in
-        let n_a = ack.n_a in
         is_knowable_by (principal_label bob) tr n_a
     )
-    | ReceivedAck rack  -> (
+    | ReceivedAck {bob; n_a}  -> (
         (* a ReceivedAck state may only be stored if
            the stored nonce is labeled for
            * the storing principal (alice)
@@ -141,8 +136,6 @@ let state_predicate_p: local_state_predicate state_t = {
              (the expected sender of the Ack)
         *)
         let alice = prin in
-        let bob = rack.bob in
-        let n_a = rack.n_a in
         is_secret (nonce_label alice bob) tr n_a
     )
   );
@@ -165,7 +158,7 @@ let state_predicate_p: local_state_predicate state_t = {
 let all_sessions = [
   pki_tag_and_invariant;
   private_keys_tag_and_invariant;
-  (|local_state_state.tag, local_state_predicate_to_local_bytes_state_predicate state_predicate_p|);
+  (|local_state_state_t.tag, local_state_predicate_to_local_bytes_state_predicate state_predicate_online|);
 ]
 
 /// We have no events here,
@@ -178,7 +171,7 @@ let all_events = []
 /// * the state invariant and
 /// * the event invariant
 
-let trace_invariants_p: trace_invariants = {
+let trace_invariants_online: trace_invariants = {
   state_pred = mk_state_pred all_sessions;
   event_pred = mk_event_pred all_events;
 }
@@ -191,17 +184,15 @@ let trace_invariants_p: trace_invariants = {
 /// * the crypto invariants and
 /// * the trace invariants
 
-instance protocol_invariants_p: protocol_invariants = {
-  crypto_invs = crypto_invariants_p;
-  trace_invs = trace_invariants_p;
+instance protocol_invariants_online: protocol_invariants = {
+  crypto_invs = crypto_invariants_online;
+  trace_invs = trace_invariants_online;
 }
 
+let complies_with_online_protocol tr = trace_invariant #protocol_invariants_online tr
 
-let complies_with_online_protocol tr = trace_invariant #protocol_invariants_p tr
-
-(*** Helper Lemmas for the Secrecy Proof ***)
-
-// TODO: Can all of this be hidden somehow?
+/// Lemmas that the global state predicate contains all the local ones
+(*TODO: can all of this be hidden ?*)
 
 val all_sessions_has_all_sessions: unit -> Lemma (norm [delta_only [`%all_sessions; `%for_allP]; iota; zeta] (for_allP (has_local_bytes_state_predicate) all_sessions))
 let all_sessions_has_all_sessions () =
@@ -209,11 +200,11 @@ let all_sessions_has_all_sessions () =
   mk_state_pred_correct all_sessions;
   norm_spec [delta_only [`%all_sessions; `%for_allP]; iota; zeta] (for_allP (has_local_bytes_state_predicate) all_sessions)
 
-val protocol_invariants_p_has_p_session_invariant: squash (has_local_state_predicate state_predicate_p)
+val protocol_invariants_p_has_p_session_invariant: squash (has_local_state_predicate state_predicate_online)
 let protocol_invariants_p_has_p_session_invariant = all_sessions_has_all_sessions ()
 
-val protocol_invariants_p_has_pki_invariant: squash (has_pki_invariant #protocol_invariants_p)
+val protocol_invariants_p_has_pki_invariant: squash (has_pki_invariant #protocol_invariants_online)
 let protocol_invariants_p_has_pki_invariant = all_sessions_has_all_sessions ()
 
-val protocol_invariants_p_has_private_keys_invariant: squash (has_private_keys_invariant #protocol_invariants_p)
+val protocol_invariants_p_has_private_keys_invariant: squash (has_private_keys_invariant #protocol_invariants_online)
 let protocol_invariants_p_has_private_keys_invariant = all_sessions_has_all_sessions ()

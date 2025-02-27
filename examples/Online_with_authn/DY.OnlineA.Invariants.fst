@@ -175,9 +175,16 @@ let event_predicate_online: event_predicate event_t =
           event_triggered tr alice (Initiating {alice; bob; n_a}))
     )
     | Finishing {alice; bob; n_a} -> (
+        (* A Finishing event may only be triggered if,
+           * the triggering principal is the first principal stored in the event (alice)
+           * the same principal triggered an Initiating event with the same bob and n_a
+           * if the stored nonce n_a has not leaked,
+             then the second stored principal (bob)
+             must have triggered a Responding event with the same data
+        *)
         prin == alice /\
         event_triggered tr alice (Initiating {alice; bob; n_a}) /\
-        ( is_corrupt tr (nonce_label alice bob) \/
+        ( is_publishable tr n_a \/
           event_triggered tr bob (Responding {alice; bob; n_a}))
     )
 
@@ -187,7 +194,7 @@ let event_predicate_online: event_predicate event_t =
 let all_sessions = [
   pki_tag_and_invariant;
   private_keys_tag_and_invariant;
-  (|local_state_state.tag, local_state_predicate_to_local_bytes_state_predicate state_predicate_online|);
+  (|local_state_state_t.tag, local_state_predicate_to_local_bytes_state_predicate state_predicate_online|);
 ]
 
 /// Now we have an event type

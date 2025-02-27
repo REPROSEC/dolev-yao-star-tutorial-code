@@ -29,8 +29,7 @@ val send_ping_invariant_short_version:
   alice:principal -> bob:principal -> alice_public_keys_sid:state_id ->
   tr:trace ->
   Lemma
-  ( requires trace_invariant tr
-  )
+  (requires trace_invariant tr)
   (ensures (
     let (_ , tr_out) = send_ping alice bob alice_public_keys_sid tr in
     trace_invariant tr_out
@@ -73,7 +72,7 @@ val decode_ping_proof:
   msg:bytes ->
   Lemma
   (requires (
-    trace_invariant tr /\ 
+    trace_invariant tr /\
     bytes_invariant tr msg
   ))
   (ensures (
@@ -84,9 +83,8 @@ val decode_ping_proof:
         ( is_publishable tr n_a \/ 
           event_triggered tr alice (Initiating {alice; bob; n_a}) 
         )
-     )
-   )
-  )
+    )
+  ))
 let decode_ping_proof tr bob bob_private_keys_sid msg =
     match decode_ping bob bob_private_keys_sid msg tr with
     | (None, _) -> ()
@@ -104,8 +102,7 @@ val receive_ping_and_send_ack_invariant:
   bob:principal -> bob_private_keys_sid:state_id -> bob_public_keys_sid:state_id -> ts:timestamp ->
   tr:trace ->
   Lemma
-  ( requires trace_invariant tr
-  )
+  (requires trace_invariant tr)
   (ensures (
     let (_ , tr_out) = receive_ping_and_send_ack bob bob_private_keys_sid bob_public_keys_sid ts tr in
     trace_invariant tr_out
@@ -176,9 +173,7 @@ val decode_ack_invariant:
   alice:principal -> alice_private_keys_sid:state_id -> cipher:bytes ->
   tr:trace ->
   Lemma
-  (requires
-    trace_invariant tr
-  )
+  (requires trace_invariant tr)
   (ensures (
     let (_, tr_out) = decode_ack alice alice_private_keys_sid cipher tr in
     trace_invariant tr_out
@@ -260,9 +255,7 @@ val receive_ack_invariant:
   alice:principal -> alice_private_keys_sid:state_id -> msg_ts:timestamp ->
   tr:trace ->
   Lemma
-  (requires
-    trace_invariant tr
-  )
+  (requires trace_invariant tr)
   (ensures (
     let (_, tr_out) = receive_ack alice alice_private_keys_sid msg_ts tr in
     trace_invariant tr_out
@@ -285,9 +278,7 @@ let receive_ack_invariant alice alice_private_keys_sid msg_ts tr =
               assert(trace_invariant tr_ev);
                                                    
               let newst = ReceivedAck {bob; n_a} in
-
               let ((), tr_st) = set_state alice sid newst tr_ev in
-              
               assert(trace_invariant tr_st)
           )
       )
