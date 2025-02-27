@@ -16,7 +16,7 @@ open DY.NSLP.Data
 /// B -> A: enc{B, N_A, N_B}_A  Msg 2
 /// A -> B: enc{N_B}_B          Msg 3
 ///
-/// The model consists of 4 function,
+/// The model consists of 4 functions,
 /// one for each protocol step:
 /// 1. Alice sends the first message to Bob (`send_msg1`)
 /// 2. Bob sends the second message to Alice (`send_msg2`)
@@ -26,9 +26,10 @@ open DY.NSLP.Data
 (*** Sending the first message (Alice, n_a) ***)
 
 /// Alice sends the first message to Bob:
-/// * Alice generates a new nonce [n_a]
-/// * encrypts the message (Alice, n_a) for Bob
-/// * sends the encrypted message
+/// * Alice generates a new nonce [n_a],
+/// * triggers an Initiating event,
+/// * encrypts the message (Alice, n_a) for Bob,
+/// * sends the encrypted message, and
 /// * stores n_a and Bob in a state (in a new session)
 /// The step returns the ID of the new state
 /// and the timestamp of the message on the trace
@@ -59,6 +60,7 @@ let send_msg1 alice bob alice_public_keys_sid =
 /// * read the message from the trace
 /// * decrypt the message to (Alice, n_a)
 /// * generate a new nonce [n_b]
+/// * trigger a "Responding to Message 1" event
 /// * encrypt the reply (Bob, n_a, n_b) for Alice
 /// * send the encrypted reply
 /// * store n_a, n_b and Alice in a state in a new session
@@ -69,12 +71,12 @@ let send_msg1 alice bob alice_public_keys_sid =
 /// * the message is not of the right type, i.e., not a first message
 /// * encryption fails (for example, if Bob doesn't have a public key for Alice)
 
+/// We pull out the decryption of the message.
 val decode_msg1: principal -> state_id -> bytes -> traceful (option message1_t)
 let decode_msg1 bob bob_private_keys_sid msg =
   let*? msg1 = pke_dec_with_key_lookup #message_t bob bob_private_keys_sid key_tag msg in
   guard_tr (Msg1? msg1);*?
   return (Some (Msg1?.m1 msg1))
-  
 
 val receive_msg1_and_send_msg2: principal -> state_id -> state_id -> timestamp -> traceful (option (state_id & timestamp))
 let receive_msg1_and_send_msg2 bob bob_private_keys_sid bob_public_keys_sid msg_ts =
@@ -90,7 +92,6 @@ let receive_msg1_and_send_msg2 bob bob_private_keys_sid bob_public_keys_sid msg_
   let*? msg2_encrypted = pke_enc_for bob alice bob_public_keys_sid key_tag msg2 in
   let* msg2_ts = send_msg msg2_encrypted in
 
-
   let state = SentMsg2 {alice; n_a; n_b} in
   let* sess_id = start_new_session bob state in
   
@@ -102,6 +103,7 @@ let receive_msg1_and_send_msg2 bob bob_private_keys_sid bob_public_keys_sid msg_
 /// Alice receives the second messages and replies:
 /// * read the message from the trace
 /// * decrypt the message to (Bob, n_a, n_b)
+/// * trigger a "Responding to Message 2" event
 /// * encrypt the reply (n_b) for Bob
 /// * send the encrypted reply
 /// * store n_a, n_b and Bob in a state in the session related to Bob and n_a
@@ -113,13 +115,13 @@ let receive_msg1_and_send_msg2 bob bob_private_keys_sid bob_public_keys_sid msg_
 /// * encryption fails (for example, if Bob doesn't have a public key for Alice)
 /// * there is no prior session related to Bob and n_a
 
+/// Again, we pull out decryption of the message.
 val decode_msg2: principal -> state_id -> bytes -> traceful (option message2_t)
 let decode_msg2 alice alice_private_keys_sid msg =
   let*? msg2 = pke_dec_with_key_lookup #message_t alice alice_private_keys_sid key_tag msg in
   guard_tr (Msg2? msg2);*?
   return (Some (Msg2?.m2 msg2))
   
-
 val receive_msg2_and_send_msg3: principal -> state_id -> state_id -> timestamp -> traceful (option (state_id & timestamp))
 let receive_msg2_and_send_msg3 alice alice_private_keys_sid alice_public_keys_sid msg_ts =
   let*? msg = recv_msg msg_ts in
@@ -154,6 +156,7 @@ let receive_msg2_and_send_msg3 alice alice_private_keys_sid alice_public_keys_si
 /// * read the message from the trace
 /// * decrypt the message to (n_b)
 /// * check if Bob previously sent n_b in some session
+/// * trigger a "Finishing" event
 /// * store completion of this session in a new state
 /// Returns the ID of the session that is marked as completed.
 /// The step fails, if one of
@@ -161,14 +164,13 @@ let receive_msg2_and_send_msg3 alice alice_private_keys_sid alice_public_keys_si
 /// * the message is not of the right type, i.e., not a reply
 /// * there is no prior session related to n_a
 
-
+/// Again, we pull out decryption of the message.
 val decode_msg3: principal -> state_id -> bytes -> traceful (option message3_t)
 let decode_msg3 bob bob_private_keys_sid msg =
   let*? msg3 = pke_dec_with_key_lookup #message_t bob bob_private_keys_sid key_tag msg in
   guard_tr (Msg3? msg3);*?
   return (Some (Msg3?.m3 msg3))
   
-
 val receive_msg3: principal -> state_id -> timestamp -> traceful (option state_id)
 let receive_msg3 bob bob_private_keys_sid msg3_ts =
   let*? msg = recv_msg msg3_ts in

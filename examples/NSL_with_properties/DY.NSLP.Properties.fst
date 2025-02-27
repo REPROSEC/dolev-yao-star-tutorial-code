@@ -23,12 +23,12 @@ val n_a_secrecy:
   tr:trace -> alice:principal -> bob:principal -> n_a:bytes ->
   Lemma
   (requires
-    attacker_knows tr n_a /\
     trace_invariant tr /\ (
       (state_was_set_some_id tr alice (SentMsg1 {bob; n_a})) \/
       (exists n_b. state_was_set_some_id tr alice (SentMsg3 {bob; n_a; n_b})) \/
       (exists n_b. state_was_set_some_id tr bob (ReceivedMsg3 {alice; n_a; n_b}))
-    )
+    ) /\
+    attacker_knows tr n_a
   )
   (ensures principal_is_corrupt tr alice \/ principal_is_corrupt tr bob)
 let n_a_secrecy tr alice bob n_a =

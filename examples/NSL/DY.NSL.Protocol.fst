@@ -16,7 +16,7 @@ open DY.NSL.Data
 /// B -> A: enc{B, N_A, N_B}_A  Msg 2
 /// A -> B: enc{N_B}_B          Msg 3
 ///
-/// The model consists of 4 function,
+/// The model consists of 4 functions,
 /// one for each protocol step:
 /// 1. Alice sends the first message to Bob (`send_msg1`)
 /// 2. Bob sends the second message to Alice (`send_msg2`)

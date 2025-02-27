@@ -46,12 +46,13 @@ let run () : traceful (option unit ) =
 
   (*** The actual protocol run ***)
 
-  // Alice sends a Ping to Bob
+  // Alice sends the first message to Bob
   let*? (alice_sid, msg1_ts) = send_msg1 alice bob alice_public_keys_sid in
-  // Bob replies with an Ack (reading the ping at the given timestamp)
+  // Bob replies with a second message (reading Message 1 at the provided timestamp)
   let*? (bob_sid, msg2_ts) = receive_msg1_and_send_msg2 bob bob_private_keys_sid bob_public_keys_sid msg1_ts in
-  let*? (bob_sid, msg3_ts) = receive_msg2_and_send_msg3 alice alice_private_keys_sid alice_public_keys_sid msg2_ts in
-  // Alice receives the Ack (at the given ack timestamp)
+  // Alice replies with the third message
+  let*? (alice_sid, msg3_ts) = receive_msg2_and_send_msg3 alice alice_private_keys_sid alice_public_keys_sid msg2_ts in
+  // Bob receives the final message (at the given timestamp)
   receive_msg3 bob bob_private_keys_sid msg3_ts;*?
 
 

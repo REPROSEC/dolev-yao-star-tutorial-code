@@ -26,7 +26,7 @@ open DY.NSLP.Protocol
 
 instance crypto_usages_nsl : crypto_usages = default_crypto_usages
 
-#push-options "--ifuel 3 --fuel 0"
+#push-options "--ifuel 3"
 val crypto_predicates_nsl: crypto_predicates
 let crypto_predicates_nsl = {
   default_crypto_predicates with
@@ -60,8 +60,6 @@ let crypto_predicates_nsl = {
   };
 }
 #pop-options
-
-
 
 instance crypto_invariants_nsl: crypto_invariants = {
   usages = crypto_usages_nsl;
@@ -148,7 +146,7 @@ let event_predicate_nsl: event_predicate event_t =
 let all_sessions = [
   pki_tag_and_invariant;
   private_keys_tag_and_invariant;
-  (|local_state_state.tag, local_state_predicate_to_local_bytes_state_predicate state_predicate_nsl|);
+  (|local_state_state_t.tag, local_state_predicate_to_local_bytes_state_predicate state_predicate_nsl|);
 ]
 
 /// List of all local event predicates.
