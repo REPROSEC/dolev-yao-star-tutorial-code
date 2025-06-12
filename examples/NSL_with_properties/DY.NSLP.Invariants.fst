@@ -8,6 +8,8 @@ open DY.Extend
 open DY.NSLP.Data
 open DY.NSLP.Protocol
 
+open FStar.List.Tot.Base
+
 #set-options "--fuel 0 --ifuel 1 --z3rlimit 25  --z3cliopt 'smt.qi.eager_threshold=100'"
 
 /// This module defines the protocol invariants,

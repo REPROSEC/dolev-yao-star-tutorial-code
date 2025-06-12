@@ -7,6 +7,8 @@ open DY.Lib
 open DY.OnlineS.Data
 open DY.OnlineS.Protocol
 
+open FStar.List.Tot.Base
+
 #set-options "--fuel 0 --ifuel 1 --z3rlimit 25"
 
 /// In this module, we define the protocol invariants.
